@@ -628,6 +628,44 @@ function joinWithoutOverlap(head: string, tail: string): string {
 }
 
 /**
+ * Merge a continuation response onto the accumulated transcript.
+ *
+ * A well-behaved continuation is plain text that resumes the current file.
+ * But models often re-emit the `<<<FILE>>>` header out of habit — and a naive
+ * append would then make parseStream *overwrite* the complete file with the
+ * tiny continuation fragment (silent data loss). Instead, when the tail
+ * contains protocol blocks, splice each block onto the matching file with
+ * overlap removal, and re-serialize the transcript.
+ */
+export function mergeContinuation(accumulated: string, tail: string): string {
+  const tailParsed = parseStream(tail);
+  const headParsed = parseStream(accumulated);
+  if (!tailParsed.files.length || !headParsed.files.length) {
+    return joinWithoutOverlap(accumulated, tail);
+  }
+
+  const merged: ProjectFile[] = headParsed.files.map((file) => {
+    const extra = tailParsed.files.find(
+      (item) => item.path.toLowerCase() === file.path.toLowerCase(),
+    );
+    return extra
+      ? { path: file.path, content: joinWithoutOverlap(file.content, extra.content) }
+      : file;
+  });
+  tailParsed.files.forEach((file) => {
+    if (!merged.some((item) => item.path.toLowerCase() === file.path.toLowerCase())) {
+      merged.push(file);
+    }
+  });
+
+  const head = headParsed.text ? `${headParsed.text}\n\n` : '';
+  return (
+    head +
+    merged.map((file) => `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`).join('\n\n')
+  );
+}
+
+/**
  * Stream a generation round, automatically continuing when the model hits its
  * per-response output limit mid-file. A truncated script file renders but never
  * executes, which is exactly why "the preview shows up but nothing is
@@ -664,7 +702,7 @@ export async function runGeneration({
       throttledEmit();
     });
     live = '';
-    accumulated = accumulated ? joinWithoutOverlap(accumulated, raw) : raw;
+    accumulated = accumulated ? mergeContinuation(accumulated, raw) : raw;
     emit();
   };
 

@@ -108,6 +108,38 @@ describe('mergeFiles', () => {
   });
 });
 
+describe('mergeContinuation', () => {
+  it('续写轮重新输出协议头时拼接而非覆盖完整文件', () => {
+    // 模型违规：续写时把 <<<FILE>>> 头又发了一遍。直接 append 会让
+    // parseStream 用续写片段覆盖完整文件，导致数据丢失。
+    const head =
+      '说明文字\n\n<<<FILE path="app.js">>>\nvar a = 1;\nfunction run() {\n  return a;\n<<<END>>>';
+    const tail = '<<<FILE path="app.js">>>\n}\nconsole.log(run());\n<<<END>>>';
+    const merged = agent.parseStream(agent.mergeContinuation(head, tail));
+    expect(merged.files).toHaveLength(1);
+    expect(merged.files[0].content).toContain('var a = 1;');
+    expect(merged.files[0].content).toContain('console.log(run());');
+  });
+
+  it('纯文本续写（无协议头）直接拼接到末尾', () => {
+    const head = '<<<FILE path="app.js">>>\nvar a = 1;\n';
+    const tail = 'var b = 2;\n';
+    const merged = agent.parseStream(agent.mergeContinuation(head, tail));
+    expect(merged.files[0].content).toContain('var a = 1;');
+    expect(merged.files[0].content).toContain('var b = 2;');
+  });
+
+  it('续写内容与已输出尾部重叠时自动去重', () => {
+    const head = '<<<FILE path="app.js">>>\nvar total = 100;\n';
+    // 模型重复了「var total = 100;」再继续
+    const tail = 'var total = 100;\nvar next = 200;\n';
+    const merged = agent.parseStream(agent.mergeContinuation(head, tail));
+    const content = merged.files[0].content;
+    expect(content.match(/var total = 100;/g)).toHaveLength(1);
+    expect(content).toContain('var next = 200;');
+  });
+});
+
 describe('isRunnable / buildPreview', () => {
   const files = agent.parseStream(FULL).files;
 

@@ -192,6 +192,13 @@ class AIHubService:
 
             stream = await client.chat.completions.create(**create_kwargs)
 
+            # Coalesce tiny upstream deltas into larger SSE frames. DeepSeek
+            # emits many small chunks per second; forwarding each one costs a
+            # full frame through the gateway and a JSON parse in the browser.
+            # Buffering up to ~256 chars / 32ms keeps the panel visually live
+            # while cutting frame count by roughly two orders of magnitude.
+            buffer = ""
+            last_flush = time.time()
             async for chunk in stream:
                 if not chunk.choices or not chunk.choices[0].delta:
                     continue
@@ -205,7 +212,15 @@ class AIHubService:
                     if first_content_at is None:
                         first_content_at = time.time() - start_time
                     content_chars += len(content)
-                    yield content
+                    buffer += content
+                    now = time.time()
+                    if len(buffer) >= 256 or now - last_flush >= 0.032:
+                        yield buffer
+                        buffer = ""
+                        last_flush = now
+
+            if buffer:
+                yield buffer
 
         except Exception as e:
             elapsed = time.time() - start_time

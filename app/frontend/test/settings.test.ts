@@ -85,7 +85,7 @@ describe('loadSettings', () => {
     );
     const loaded = loadSettings();
     expect(loaded.temperature).toBe(1);
-    expect(loaded.maxFiles).toBe(10);
+    expect(loaded.maxFiles).toBe(50);
     expect(loaded.versionKeep).toBe(5);
     expect(loaded.maxRepairRounds).toBe(3);
   });

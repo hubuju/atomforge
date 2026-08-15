@@ -519,20 +519,26 @@ severity 判定标准（宁缺毋滥）：
 
 严格要求：
 - **禁止**为凑数而报问题：样式细节、文案措辞、可读性、性能微调等打磨项一律不要报。
-- 只有当你能指出具体文件、具体标识符、具体后果时才报。
+- 只有当你**在代码中找到了确定性的缺陷证据**（缺失的元素、未绑定的按钮、引用了不存在的函数/变量、脚本不闭合、核心交互没实现）时才报。
+- **输出前逐条自检**：这个问题的具体后果是什么？如果分析后发现「其实能正常运行」「实际不会触发」，就**不要**把它写进 findings。
+- 不要把推理过程中的「可能/如果」式疑虑当问题上报——宁可漏报，不要误报。
 - detail 必须具体到位置或标识符，例如「app.js 里 document.getElementById('xxx') 对应元素在 index.html 中不存在」。
 - 最多 5 条，按严重度从高到低排列。
 - 确认没有问题时输出 { "findings": [] }，这完全是可接受的结论。`;
 
-/** All ids a JS file looks up through getElementById / querySelector. */
+/** Ids a JS file looks up through getElementById / querySelector('#id'). */
 function collectJsRefs(files: ProjectFile[]): string[] {
   const refs: string[] = [];
   files.forEach((file) => {
     if (fileLang(file.path) !== 'js') return;
-    const re = /(?:getElementById|querySelector)\s*\(\s*['"](\s*#?[^'")\s]+)['"]/g;
+    // Only element *ids* are comparable with the HTML id list. Class
+    // selectors (querySelector('.card')) and compound selectors must NOT be
+    // compared — treating them as missing ids produced false blockers that
+    // forced a pointless fix round and a second review.
+    const re = /getElementById\s*\(\s*['"]([^'")\s]+)['"]|querySelector(?:All)?\s*\(\s*['"]#([^'")\s]+)['"]/g;
     let match: RegExpExecArray | null;
     while ((match = re.exec(file.content)) !== null) {
-      const id = match[1].trim().replace(/^#/, '');
+      const id = (match[1] || match[2] || '').trim();
       if (id && !refs.includes(id)) refs.push(id);
     }
   });

@@ -572,18 +572,6 @@ export default function Workspace() {
             setActivePath(writing);
             setStreaming((prev) => (prev ? { ...prev, files: next, writing } : prev));
           },
-          onStream: (path, content) => {
-            setActivePath(path);
-            setStreaming((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    writing: path,
-                    files: mergeFiles(prev.files || files, [{ path, content }]),
-                  }
-                : prev,
-            );
-          },
         });
 
         setStreaming((prev) => (prev ? { ...prev, stage: 'audit', writing: '' } : prev));

@@ -169,14 +169,10 @@ async function callRole(
   settings: ModelSettings,
   messages: ChatTurn[],
   inputDigest: string,
-  onDelta?: (delta: string) => void,
 ): Promise<string> {
   const roleSettings = resolveRoleSettings(settings, role);
   board.patch(role, { input: inputDigest.slice(0, 1200) });
-  const raw = await streamChat(messages, roleSettings, (delta) => {
-    board.bump(role, delta.length);
-    if (onDelta) onDelta(delta);
-  });
+  const raw = await streamChat(messages, roleSettings, (delta) => board.bump(role, delta.length));
   if (!raw.trim()) throw new Error(`${ROLE_META[role].name}没有返回任何内容`);
   return raw;
 }
@@ -200,27 +196,11 @@ async function writeFileComplete(
   path: string,
   firstMessages: ChatTurn[],
   inputDigest: string,
-  onStream?: (path: string, content: string) => void,
 ): Promise<{ content: string; complete: boolean }> {
   let content = '';
-  let lastStreamAt = 0;
-  const flushStream = (force = false) => {
-    if (!onStream) return;
-    const now = Date.now();
-    if (force || now - lastStreamAt >= 180) {
-      lastStreamAt = now;
-      onStream(path, content);
-    }
-  };
-  const feed = (delta: string) => {
-    content += delta;
-    flushStream();
-  };
-
   try {
-    const raw = await callRole(board, role, settings, firstMessages, inputDigest, feed);
+    const raw = await callRole(board, role, settings, firstMessages, inputDigest);
     content = stripCodeFence(raw, path);
-    flushStream(true);
   } catch {
     // First attempt produced nothing (thinking swallowed the budget). One
     // explicit retry before giving up on the round.
@@ -239,10 +219,8 @@ async function writeFileComplete(
           },
         ],
         `重试 ${path}`,
-        feed,
       );
       content = stripCodeFence(raw, path);
-      flushStream(true);
     } catch {
       content = '';
     }
@@ -251,26 +229,15 @@ async function writeFileComplete(
   for (let attempt = 0; attempt < 2 && content && !fileLooksComplete(content, path); attempt += 1) {
     board.patch(role, { detail: `${path} 被截断，正在续写（${attempt + 1}/2）` });
     try {
-      let moreBuffer = '';
       const more = await callRole(
         board,
         role,
         settings,
         continueFileMessages(path, content, role),
         `续写 ${path}`,
-        (delta) => {
-          moreBuffer += delta;
-          if (!onStream) return;
-          const now = Date.now();
-          if (now - lastStreamAt >= 180) {
-            lastStreamAt = now;
-            onStream(path, `${content}\n${moreBuffer}`);
-          }
-        },
       );
       const tail = stripCodeFence(more, path);
       if (tail) content = `${content.replace(/\s+$/, '')}\n${tail}`;
-      flushStream(true);
     } catch {
       // Continuation round came back empty — keep the partial file rather
       // than throwing away everything written so far.
@@ -341,8 +308,6 @@ export interface BuildOptions {
   board: LaneBoard;
   /** Live file set after each written or repaired file. */
   onFiles: (files: ProjectFile[], writing: string) => void;
-  /** Throttled live content of the file being written (streamed typing). */
-  onStream?: (path: string, content: string) => void;
 }
 
 export interface BuildOutcome {
@@ -386,7 +351,6 @@ export async function buildProject({
   settings,
   board,
   onFiles,
-  onStream,
 }: BuildOptions): Promise<BuildOutcome> {
   const plan = orderPlan(spec.files);
   let working = [...files];
@@ -419,7 +383,6 @@ export async function buildProject({
           total: plan.length,
         }),
         `${target.path} · ${target.purpose}`,
-        onStream,
       );
 
       if (!content) throw new Error(`${target.path} 写出来是空的`);
@@ -540,7 +503,6 @@ export async function buildProject({
           path,
           fixerMessages({ spec, file, findings: items, siblings: working }),
           items.map((item) => item.detail).join('；'),
-          onStream,
         );
         if (!content) continue;
 

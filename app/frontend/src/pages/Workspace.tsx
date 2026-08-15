@@ -73,6 +73,7 @@ import {
   readPreviewMessage,
   runGeneration,
   STARTER_IDEAS,
+  stripProtocol,
   summarize,
   type PreviewError,
   type Stage,
@@ -913,7 +914,9 @@ export default function Workspace() {
     const rows = messages.map((row) => ({
       key: `m-${row.id}`,
       role: row.role,
-      content: row.content,
+      // The file protocol is an internal transport detail: the chat pane only
+      // ever shows prose, while the code lives in the file tree.
+      content: row.role === 'assistant' ? stripProtocol(row.content) : row.content,
       kind: row.kind,
     }));
     if (streaming?.echo) {

@@ -127,13 +127,21 @@ class AIHubService:
             client = self._require_ai_client()
             messages = [self._convert_message(msg) for msg in request.messages]
 
-            response = await client.chat.completions.create(
-                model=request.model,
-                messages=messages,
-                temperature=request.temperature,
-                max_tokens=request.max_tokens,
-                stream=False,
-            )
+            create_kwargs: dict = {
+                "model": request.model,
+                "messages": messages,
+                "temperature": request.temperature,
+                "max_tokens": request.max_tokens,
+                "stream": False,
+            }
+            # Thinking is disabled by default for every model that supports the
+            # switch: code generation wants the full output budget on the files
+            # themselves, and non-thinking is dramatically faster. (It also
+            # restores temperature sampling, ignored while thinking.)
+            if str(request.model).startswith("deepseek-v4"):
+                create_kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+
+            response = await client.chat.completions.create(**create_kwargs)
 
             content = response.choices[0].message.content or ""
             usage = None
@@ -172,13 +180,17 @@ class AIHubService:
             client = self._require_ai_client()
             messages = [self._convert_message(msg) for msg in request.messages]
 
-            stream = await client.chat.completions.create(
-                model=request.model,
-                messages=messages,
-                temperature=request.temperature,
-                max_tokens=request.max_tokens,
-                stream=True,
-            )
+            create_kwargs: dict = {
+                "model": request.model,
+                "messages": messages,
+                "temperature": request.temperature,
+                "max_tokens": request.max_tokens,
+                "stream": True,
+            }
+            if str(request.model).startswith("deepseek-v4"):
+                create_kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+
+            stream = await client.chat.completions.create(**create_kwargs)
 
             async for chunk in stream:
                 if not chunk.choices or not chunk.choices[0].delta:

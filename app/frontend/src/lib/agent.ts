@@ -395,6 +395,18 @@ export function readPreviewMessage(data: unknown): PreviewMessage | null {
 /** Stages surfaced in the pipeline strip while a round is running. */
 export type Stage = 'plan' | 'write' | 'audit' | 'render';
 
+/**
+ * Remove `<<<FILE>>>` blocks from a chat message before it is shown to the
+ * user. The protocol is an internal transport detail; files live in the file
+ * tree, and the chat pane should only ever show human-readable prose.
+ */
+export function stripProtocol(text: string): string {
+  return text
+    .replace(/<<<FILE[^>]*>>>[\s\S]*?(?:<<<END>>>|$)/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export interface RunGenerationOptions {
   messages: ChatTurn[];
   settings: ModelSettings;
@@ -425,15 +437,15 @@ async function streamViaAtoms(
   onDelta: (delta: string) => void,
 ): Promise<string> {
   const model = settings.model || DEFAULT_SETTINGS.model;
-  // DeepSeek V4 runs in thinking mode by default, where temperature is
-  // accepted but ignored — leave it out for built-in models. V4 allows up to
-  // 384K output tokens; 64K comfortably covers a multi-file project while
-  // still capping runaway output.
+  // Thinking is disabled server-side for V4 models, which restores
+  // temperature sampling and keeps the whole budget on the code. V4 allows
+  // up to 384K output tokens; 64K comfortably covers a multi-file project.
   const body: Record<string, unknown> = {
     messages,
     model,
     stream: true,
     max_tokens: 65536,
+    temperature: settings.temperature,
   };
 
   let response: Response;

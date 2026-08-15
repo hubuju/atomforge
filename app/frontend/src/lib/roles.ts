@@ -518,14 +518,64 @@ severity 判定标准（宁缺毋滥）：
 - 最多 5 条，按严重度从高到低排列。
 - 确认没有问题时输出 { "findings": [] }，这完全是可接受的结论。`;
 
+/** All ids a JS file looks up through getElementById / querySelector. */
+function collectJsRefs(files: ProjectFile[]): string[] {
+  const refs: string[] = [];
+  files.forEach((file) => {
+    if (fileLang(file.path) !== 'js') return;
+    const re = /(?:getElementById|querySelector)\s*\(\s*['"](\s*#?[^'")\s]+)['"]/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(file.content)) !== null) {
+      const id = match[1].trim().replace(/^#/, '');
+      if (id && !refs.includes(id)) refs.push(id);
+    }
+  });
+  return refs;
+}
+
+/**
+ * Compact stand-in for a CSS file in the reviewer context. CSS is the bulk of
+ * a project's bytes but can rarely cause the *functional* defects the
+ * reviewer reports (blocker/major); a class inventory plus structure facts is
+ * enough, and keeps the reviewer input small enough to answer quickly.
+ */
+function cssDigest(content: string): string {
+  const classes = new Set<string>();
+  const re = /\.([A-Za-z_][\w-]*)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(content)) !== null) classes.add(match[1]);
+  const lines = content.split('\n').length;
+  const media = /@media/g.test(content) ? '含响应式断点' : '无响应式断点';
+  const vars = (content.match(/--[\w-]+/g) || []).length;
+  const classList = Array.from(classes).slice(0, 40).join('、');
+  return `styles.css 摘要（${lines} 行）：定义类 ${classes.size} 个${
+    classList ? `（${classList}${classes.size > 40 ? '…' : ''}）` : ''
+  }，${media}，CSS 变量 ${vars} 个。`;
+}
+
 export function reviewerMessages(
   spec: ProjectSpec,
   files: ProjectFile[],
   round: number,
 ): ChatTurn[] {
   const body = files
-    .map((file) => `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`)
+    .map((file) =>
+      fileLang(file.path) === 'css'
+        ? `<<<FILE path="${file.path}" type="styles-digest">>>\n${cssDigest(file.content)}\n<<<END>>>`
+        : `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`,
+    )
     .join('\n\n');
+
+  // A pre-computed cross-reference table: the reviewer can immediately see
+  // whether every id the JS touches actually exists in the HTML, instead of
+  // having to eyeball-diff two long files itself.
+  const htmlIds = collectHtmlIds(files);
+  const jsRefs = collectJsRefs(files);
+  const missing = jsRefs.filter((id) => !htmlIds.includes(id));
+  const xref = `交叉引用对照表（已自动核对）：
+- HTML 声明的 id（${htmlIds.length} 个）：${htmlIds.join('、') || '（无）'}
+- JS 引用的 id（${jsRefs.length} 个）：${jsRefs.join('、') || '（无）'}
+${missing.length ? `- ⚠️ JS 引用了 HTML 中不存在的 id：${missing.join('、')}` : '- ✅ JS 引用的 id 全部能在 HTML 中找到'}`;
 
   return [
     { role: 'system', content: REVIEWER_SYSTEM },
@@ -534,6 +584,8 @@ export function reviewerMessages(
       content: `规格：
 
 ${specDigest(spec)}
+
+${xref}
 
 ${round > 1 ? `这是第 ${round} 轮审查，上一轮的问题已被修复者处理过，请重新完整检查。\n\n` : ''}实现代码：
 

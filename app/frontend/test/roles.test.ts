@@ -331,6 +331,28 @@ describe('reviewerMessages / fixerMessages', () => {
     expect(second).toContain('render();');
   });
 
+  it('CSS 以摘要形式进入审查上下文，并附带交叉引用对照表', () => {
+    const withCss: ProjectFile[] = [
+      {
+        path: 'index.html',
+        content: '<html><body><button id="addBtn">x</button></body></html>',
+      },
+      {
+        path: 'app.js',
+        content: "document.getElementById('addBtn').addEventListener('click', fn);\ndocument.getElementById('nope');",
+      },
+      {
+        path: 'styles.css',
+        content: '.card { margin: 0; }\n@media (max-width: 600px) { .card { margin: 0; } }',
+      },
+    ];
+    const content = reviewerMessages(spec, withCss, 1)[1].content;
+    expect(content).toContain('styles-digest');
+    expect(content).not.toContain('.card { margin: 0; }');
+    expect(content).toContain('addBtn');
+    expect(content).toContain('不存在的 id：nope');
+  });
+
   it('修复者只收到被点名文件的完整内容与问题清单', () => {
     const findings = parseFindings(
       JSON.stringify({

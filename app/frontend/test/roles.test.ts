@@ -238,7 +238,7 @@ describe('parseFindings', () => {
     expect(findings[0].detail).toBe('render 未定义');
   });
 
-  it('丢掉没有描述的条目，最多保留 8 条', () => {
+  it('丢掉没有描述的条目，其余全部保留（不设条数上限）', () => {
     const raw = JSON.stringify({
       findings: [
         { severity: 'major', file: 'a.js', detail: '   ' },
@@ -249,7 +249,7 @@ describe('parseFindings', () => {
         })),
       ],
     });
-    expect(parseFindings(raw)).toHaveLength(8);
+    expect(parseFindings(raw)).toHaveLength(10);
   });
 
   it('审查通过时返回空数组', () => {

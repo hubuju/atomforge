@@ -523,19 +523,31 @@ export async function buildProject({
 
 /** Chat-bubble text describing what the pipeline produced. */
 export function outcomeNarrative(spec: ProjectSpec, outcome: BuildOutcome): string {
+  const purposeOf = (path: string) =>
+    spec.files.find((file) => file.path.toLowerCase() === path.toLowerCase())?.purpose || '';
+
   const lines = [
-    `${spec.title}：${spec.summary}`,
-    `实现者写了 ${outcome.files.length} 个文件（${outcome.files
-      .map((file) => file.path)
-      .join('、')}）。`,
+    `「${spec.title}」已完成生成：${spec.summary}`,
+    '',
+    `项目文件（共 ${outcome.files.length} 个）：`,
+    ...outcome.files.map((file) => {
+      const purpose = purposeOf(file.path);
+      const rows = file.content.split('\n').length;
+      return `- ${file.path}（${rows} 行）${purpose ? `：${purpose}` : ''}`;
+    }),
   ];
 
+  if (spec.interactions.length) {
+    lines.push('', '已实现的核心交互：');
+    spec.interactions.forEach((item) => lines.push(`- ${item}`));
+  }
+
   if (outcome.reviewSkipped) {
-    lines.push('本轮未运行模型审查（设置中已关闭），静态体检已兜底。');
+    lines.push('', '本轮未运行模型审查（设置中已关闭），静态体检已兜底。');
   } else if (!outcome.findings.length) {
-    lines.push('审查者没有发现问题。');
+    lines.push('', '审查者没有发现问题。');
   } else {
-    lines.push(`审查者提出 ${findingsSummary(outcome.findings)}。`);
+    lines.push('', `审查者提出 ${findingsSummary(outcome.findings)}。`);
     if (outcome.fixed.length) {
       lines.push(`修复者重写了 ${outcome.fixed.join('、')}。`);
     } else if (actionableFindings(outcome.findings).length) {

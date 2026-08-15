@@ -481,9 +481,12 @@ export default function Workspace() {
         setStreaming((prev) => (prev ? { ...prev, stage: 'render' } : prev));
         refreshPreview(nextFiles, true);
 
-        const narrative =
-          result.text ||
-          `已更新 ${result.files.map((file) => file.path).join('、')}，共 ${nextFiles.length} 个文件。`;
+        const fileList = nextFiles
+          .map((file) => `- ${file.path}（${file.content.split('\n').length} 行）`)
+          .join('\n');
+        const narrative = `${
+          result.text || '已完成本轮更新'
+        }\n\n项目文件（共 ${nextFiles.length} 个）：\n${fileList}`;
 
         await commitRound({
           workspace: project,
@@ -1451,7 +1454,7 @@ export default function Workspace() {
               {/* Source files */}
               {view !== 'preview' ? (
                 <div
-                  className={`flex min-h-0 flex-col border-b border-border xl:border-b-0 xl:border-r ${
+                  className={`flex min-h-0 min-w-0 flex-col border-b border-border xl:border-b-0 xl:border-r ${
                     view === 'split' ? 'min-h-0 flex-1 xl:flex-none' : 'flex-1'
                   }`}
                   style={view === 'split' ? { flexBasis: `${splitRatio}%` } : undefined}
@@ -1598,7 +1601,7 @@ export default function Workspace() {
 
               {/* Live sandbox */}
               {view !== 'code' ? (
-                <div className="flex min-h-0 flex-1 flex-col bg-[hsl(80_6%_9%)]">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[hsl(80_6%_9%)]">
                   {previewSrc ? (
                     <div className="flex min-h-0 flex-1 justify-center overflow-auto p-3">
                       <iframe

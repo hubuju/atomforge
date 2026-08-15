@@ -211,6 +211,34 @@ export default function Workspace() {
   const [device, setDevice] = useState<Device>('desktop');
   const [runtimeError, setRuntimeError] = useState<PreviewError | null>(null);
 
+  /** Split view: code-panel width as a percentage of the row (draggable). */
+  const [splitRatio, setSplitRatio] = useState(55);
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const startSplitDrag = useCallback(
+    (event: React.MouseEvent) => {
+      if (view !== 'split') return;
+      event.preventDefault();
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const onMove = (move: MouseEvent) => {
+        const rect = splitContainerRef.current?.getBoundingClientRect();
+        if (!rect || rect.width <= 0) return;
+        const pct = ((move.clientX - rect.left) / rect.width) * 100;
+        setSplitRatio(Math.min(82, Math.max(18, pct)));
+      };
+      const onUp = () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [view],
+  );
+
   const [audit, setAudit] = useState<AuditResult>(() => emptyAudit());
   const [auditPending, setAuditPending] = useState(false);
   const [auditVisible, setAuditVisible] = useState(false);
@@ -1415,13 +1443,19 @@ export default function Workspace() {
             ) : null}
 
             <div
-              className={`grid min-h-0 flex-1 ${
-                view === 'split' ? 'grid-rows-2 xl:grid-cols-2 xl:grid-rows-1' : 'grid-rows-1'
+              ref={splitContainerRef}
+              className={`flex min-h-0 flex-1 ${
+                view === 'split' ? 'flex-col xl:flex-row' : 'flex-row'
               }`}
             >
               {/* Source files */}
               {view !== 'preview' ? (
-                <div className="flex min-h-0 flex-col border-b border-border xl:border-b-0 xl:border-r">
+                <div
+                  className={`flex min-h-0 flex-col border-b border-border xl:border-b-0 xl:border-r ${
+                    view === 'split' ? 'min-h-0 flex-1 xl:flex-none' : 'flex-1'
+                  }`}
+                  style={view === 'split' ? { flexBasis: `${splitRatio}%` } : undefined}
+                >
                   <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-card/40 px-2">
                     <span className="pl-1 text-[11px] text-muted-foreground">
                       {displayFiles.length ? `项目文件 · ${displayFiles.length}` : '还没有文件'}
@@ -1551,9 +1585,20 @@ export default function Workspace() {
                 </div>
               ) : null}
 
+              {/* Draggable divider (split view, desktop rows) */}
+              {view === 'split' ? (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  title="拖动调整宽度"
+                  onMouseDown={startSplitDrag}
+                  className="hidden w-1.5 shrink-0 cursor-col-resize bg-border/50 transition-colors duration-150 hover:bg-primary/50 active:bg-primary xl:block"
+                />
+              ) : null}
+
               {/* Live sandbox */}
               {view !== 'code' ? (
-                <div className="flex min-h-0 flex-col bg-[hsl(80_6%_9%)]">
+                <div className="flex min-h-0 flex-1 flex-col bg-[hsl(80_6%_9%)]">
                   {previewSrc ? (
                     <div className="flex min-h-0 flex-1 justify-center overflow-auto p-3">
                       <iframe

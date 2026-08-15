@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fileLang, type FileLang } from '@/lib/bundler';
 
 /**
@@ -126,6 +126,26 @@ function tokenize(line: string, lang: FileLang): Token[] {
   return [{ text: line, cls: COLOR.plain }];
 }
 
+/**
+ * Line-level token cache. During streaming (and during incremental rewrites)
+ * most lines are byte-identical between renders; re-tokenizing them every
+ * frame was the dominant cost that made the whole page — and thereby the SSE
+ * receive loop — stall. The cache is bounded to avoid unbounded growth on
+ * very long files.
+ */
+const TOKEN_CACHE = new Map<string, Token[]>();
+const TOKEN_CACHE_MAX = 4000;
+
+function tokenizeCached(line: string, lang: FileLang): Token[] {
+  const key = `${lang}\n${line}`;
+  const hit = TOKEN_CACHE.get(key);
+  if (hit) return hit;
+  const tokens = tokenize(line, lang);
+  if (TOKEN_CACHE.size >= TOKEN_CACHE_MAX) TOKEN_CACHE.clear();
+  TOKEN_CACHE.set(key, tokens);
+  return tokens;
+}
+
 interface CodeViewerProps {
   path: string;
   content: string;
@@ -135,7 +155,23 @@ interface CodeViewerProps {
 
 export function CodeViewer({ path, content, streaming = false }: CodeViewerProps) {
   const lang = fileLang(path);
-  const lines = useMemo(() => content.replace(/\n$/, '').split('\n'), [content]);
+
+  // While streaming, throttle actual rendering to ~4Hz: the source can change
+  // many times per second and a full re-tokenize + DOM rebuild per change is
+  // what used to stall the page and back-pressure the SSE stream itself.
+  const [shown, setShown] = useState(content);
+  const latestRef = useRef(content);
+  useEffect(() => {
+    latestRef.current = content;
+    if (!streaming) {
+      setShown(content);
+      return;
+    }
+    const id = window.setTimeout(() => setShown(latestRef.current), 250);
+    return () => window.clearTimeout(id);
+  }, [content, streaming]);
+
+  const lines = useMemo(() => shown.replace(/\n$/, '').split('\n'), [shown]);
   const gutterWidth = `${String(lines.length).length + 1}ch`;
 
   return (
@@ -150,7 +186,7 @@ export function CodeViewer({ path, content, streaming = false }: CodeViewerProps
               {index + 1}
             </span>
             <code className="pr-6">
-              {tokenize(line, lang).map((token, tokenIndex) => (
+              {tokenizeCached(line, lang).map((token, tokenIndex) => (
                 <span key={tokenIndex} className={token.cls}>
                   {token.text}
                 </span>

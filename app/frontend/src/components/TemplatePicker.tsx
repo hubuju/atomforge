@@ -99,7 +99,7 @@ function Card({
           variant="ghost"
           onClick={onDelete}
           className="absolute right-2 top-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-          aria-label="删除这个模板"
+          aria-label="删除这个项目"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -140,7 +140,7 @@ export function TemplatePicker({
               : 'bg-muted/50 text-muted-foreground hover:text-foreground'
           }`}
         >
-          内置模板 {STARTER_TEMPLATES.length}
+          内置项目 {STARTER_TEMPLATES.length}
         </button>
         <button
           type="button"
@@ -151,7 +151,7 @@ export function TemplatePicker({
               : 'bg-muted/50 text-muted-foreground hover:text-foreground'
           }`}
         >
-          我的模板 {personal.length}
+          我的项目 {personal.length}
         </button>
         <button
           type="button"
@@ -203,7 +203,7 @@ export function TemplatePicker({
         ) : personalLoading ? (
           <div className="flex h-40 items-center justify-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            正在读取你的模板…
+            正在读取你的项目…
           </div>
         ) : personal.length ? (
           <div className="grid gap-2">
@@ -232,7 +232,7 @@ export function TemplatePicker({
           <div className="flex h-40 flex-col items-center justify-center gap-2 px-6 text-center">
             <Sparkles className="h-5 w-5 text-muted-foreground/60" />
             <p className="text-xs leading-relaxed text-muted-foreground">
-              还没有自己的模板。在任意项目的工作台里点「存为模板」，
+              还没有保存过的项目。在任意项目的工作台里点「存为我的项目」，
               下次就能直接基于它新建。
             </p>
           </div>

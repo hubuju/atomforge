@@ -42,12 +42,20 @@ function systemPrompt(maxFiles: number): string {
 
 代码硬性要求（生成后会被自动检查，不达标会被打回重做）：
 - 必须真的能跑：不留 TODO、不留空函数，**每个按钮和输入框都要有真实绑定的事件处理**。
+- 绑定事件前先确认元素存在：所有 querySelector / getElementById 的结果要么在 HTML 里保证存在，要么做判空保护，禁止对 null 直接 addEventListener（这是最常见的运行时崩溃）。
 - index.html 必须写到 </html>，每个 <script> 都要闭合。
 - 必须声明 <meta name="viewport" content="width=device-width, initial-scale=1">。
 - 允许的外部资源只有 CDN：https://cdn.tailwindcss.com 、https://unpkg.com 、https://cdn.jsdelivr.net 、以及 https://images.unsplash.com 的图片。
 - 沙箱里 localStorage 可能不可用，访问时必须 try/catch 包裹。
 - 用原生 JS，不要引入 React 构建链。
-- 视觉现代精致：配色克制、留白合理、有 hover/active 状态、移动端可用。避免蓝紫渐变与玻璃拟态这类套路化外观。
+- **视觉精致是硬指标**（评审看到的第一眼就是它）：
+  * 三层次结构：页面背景（低饱和浅灰/暖灰）、卡片（纯白或微灰、1px 边框+轻投影）、主按钮（一个主题色即可，如深蓝/墨绿/暖橙；禁止蓝紫渐变与玻璃拟态）；
+  * 文字三级对比清晰：标题 / 正文 / 辅助文字；中文正文 14-16px、行高 1.6；
+  * 卡片圆角统一 10-14px、按钮圆角 8-10px，间距 16-24px，整体留白充足不拥挤；
+  * 每个按钮有 hover（加深或轻微位移）与 active 反馈，输入框聚焦有主题色描边；
+  * 表单控件（input/select/button）必须自定义样式，禁止浏览器默认外观；
+  * 列表要有空状态提示，增删操作要有明确反馈（提示或过渡动画）；
+  * 移动端断点流畅：小屏单列、按钮高度 ≥40px。
 - 注释与界面文案使用中文。
 - **控制体量**：所有文件合计约 900 行以内。注释精简，示例数据 3-6 条，不重复相似的 HTML 区块。
 

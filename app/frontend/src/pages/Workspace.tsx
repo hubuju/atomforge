@@ -701,7 +701,7 @@ export default function Workspace() {
     navigate(location.pathname, { replace: true, state: null });
     if (state.pendingBrief) setInput(state.pendingBrief);
     toast({
-      title: `已套用模板「${state.fromTemplate}」`,
+      title: `已套用项目「${state.fromTemplate}」`,
       description: state.pendingBrief
         ? '需求已填在输入框，确认后发送即可开始改。'
         : '右侧已经能直接运行，接着说需求就能继续改。',
@@ -784,7 +784,7 @@ export default function Workspace() {
   const handleSaveTemplate = async () => {
     const name = templateName.trim();
     if (!name) {
-      toast({ title: '请给模板起个名字', variant: 'destructive' });
+      toast({ title: '请给项目起个名字', variant: 'destructive' });
       return;
     }
     if (displayFiles.length === 0) {
@@ -802,11 +802,11 @@ export default function Workspace() {
       setTemplateName('');
       setTemplateDesc('');
       toast({
-        title: '已存为模板',
+        title: '已存为我的项目',
         description: '回到工作区新建项目时就能选到它。',
       });
     } catch (error) {
-      toast({ title: '保存模板失败', description: errorText(error), variant: 'destructive' });
+      toast({ title: '保存项目失败', description: errorText(error), variant: 'destructive' });
     } finally {
       setSavingTemplate(false);
     }
@@ -1002,12 +1002,12 @@ export default function Workspace() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                setTemplateName(project ? `${project.name} 模板` : '我的模板');
+                setTemplateName(project ? `${project.name} 模板` : '我的项目');
                 setTemplateOpen(true);
               }}
             >
               <LayoutTemplate className="mr-2 h-3.5 w-3.5" />
-              <span className="flex-1">存为我的模板</span>
+              <span className="flex-1">存为我的项目</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -1546,15 +1546,15 @@ export default function Workspace() {
       <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>存为我的模板</DialogTitle>
+            <DialogTitle>存为我的项目</DialogTitle>
             <DialogDescription>
               保存当前 {displayFiles.length} 个文件的快照。之后新建项目时可以直接从它起步，
-              这里再怎么改都不会影响已保存的模板。
+              这里再怎么改都不会影响已保存的项目。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">
             <div className="space-y-2">
-              <Label htmlFor="template-name">模板名称</Label>
+              <Label htmlFor="template-name">项目名称</Label>
               <Input
                 id="template-name"
                 value={templateName}
@@ -1569,7 +1569,7 @@ export default function Workspace() {
                 id="template-desc"
                 value={templateDesc}
                 onChange={(event) => setTemplateDesc(event.target.value)}
-                placeholder="这个模板适合做什么、已经包含了哪些部分"
+                placeholder="这个项目适合做什么、已经包含了哪些部分"
                 rows={3}
                 className="resize-none leading-relaxed"
               />
@@ -1590,7 +1590,7 @@ export default function Workspace() {
               className="gap-1.5"
             >
               {savingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              保存模板
+              保存项目
             </Button>
           </DialogFooter>
         </DialogContent>

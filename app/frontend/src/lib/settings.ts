@@ -39,10 +39,16 @@ export interface ModelOption {
  */
 export const ATOMS_MODELS: ModelOption[] = [
   {
-    id: 'deepseek-chat',
-    name: 'DeepSeek V3',
+    id: 'deepseek-v4-pro',
+    name: 'DeepSeek V4 Pro',
     tagline: '代码专家',
-    detail: '默认模型，代码生成与多轮迭代最均衡',
+    detail: '默认模型，生成质量最高，复杂交互与精致视觉首选',
+  },
+  {
+    id: 'deepseek-v4-flash',
+    name: 'DeepSeek V4 Flash',
+    tagline: '高速实惠',
+    detail: '响应更快、成本更低，简单工具页够用',
   },
   {
     id: 'deepseek-reasoner',
@@ -73,7 +79,7 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
     id: 'deepseek',
     label: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-pro',
     hint: '在 DeepSeek 开放平台创建 API Key',
   },
   {

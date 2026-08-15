@@ -76,7 +76,7 @@ describe('loadSettings', () => {
       STORAGE_KEY,
       JSON.stringify({
         mode: 'atoms',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-pro',
         temperature: 9,
         maxFiles: 99,
         versionKeep: 1,
@@ -93,7 +93,7 @@ describe('loadSettings', () => {
   it('数值字段是垃圾内容时使用默认值', () => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ model: 'deepseek-chat', temperature: 'hot', versionKeep: null }),
+      JSON.stringify({ model: 'deepseek-v4-pro', temperature: 'hot', versionKeep: null }),
     );
     const loaded = loadSettings();
     expect(loaded.temperature).toBe(DEFAULT_SETTINGS.temperature);
@@ -109,7 +109,7 @@ describe('loadSettings', () => {
   });
 
   it('开关类字段默认开启，只有显式 false 才关闭', () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ model: 'deepseek-chat' }));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ model: 'deepseek-v4-pro' }));
     const loaded = loadSettings();
     expect(loaded.autoAudit).toBe(true);
     expect(loaded.multiAgent).toBe(true);
@@ -119,7 +119,7 @@ describe('loadSettings', () => {
   it('角色模型字段被补齐成四个键', () => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ model: 'deepseek-chat', roleModels: { coder: '  deepseek-reasoner  ', junk: 1 } }),
+      JSON.stringify({ model: 'deepseek-v4-pro', roleModels: { coder: '  deepseek-reasoner  ', junk: 1 } }),
     );
     const loaded = loadSettings();
     expect(Object.keys(loaded.roleModels).sort()).toEqual([
@@ -197,10 +197,10 @@ describe('resolveRoleSettings', () => {
       baseUrl: 'https://x.com/v1',
       apiKey: 'k-1',
       temperature: 0.7,
-      roleModels: { ...emptyRoleModels(), reviewer: 'deepseek-chat' },
+      roleModels: { ...emptyRoleModels(), reviewer: 'deepseek-v4-pro' },
     });
     const resolved = resolveRoleSettings(settings, 'reviewer');
-    expect(resolved.model).toBe('deepseek-chat');
+    expect(resolved.model).toBe('deepseek-v4-pro');
     expect(resolved.baseUrl).toBe('https://x.com/v1');
     expect(resolved.apiKey).toBe('k-1');
     expect(resolved.temperature).toBe(0.7);

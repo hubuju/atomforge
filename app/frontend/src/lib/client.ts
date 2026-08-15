@@ -100,6 +100,11 @@ export const api = {
     return callHub<AccountInfo>('/me');
   },
 
+  /** One-tap anonymous entry: the backend mints a throwaway account. */
+  guest() {
+    return callHub<{ token: string; account: AccountInfo }>('/guest');
+  },
+
   logout() {
     return callHub<{ ok: boolean }>('/logout');
   },

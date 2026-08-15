@@ -393,6 +393,42 @@ async def me(data: TokenRequest, db: AsyncSession = Depends(get_db)) -> AccountI
     return payload
 
 
+@router.post("/guest", response_model=AuthResponse)
+async def guest_entry(db: AsyncSession = Depends(get_db)) -> AuthResponse:
+    """Anonymous one-tap entry: mint a throwaway account.
+
+    Visitors can try the whole product without typing anything. The account
+    lives in the same table as regular ones, so every feature (generation,
+    versions, publishing) works; the token stays in localStorage and the data
+    persists server-side. The random password is discarded — only the opaque
+    session token can open this account again.
+    """
+    service = AccountsService(db)
+    name = ""
+    for _ in range(8):
+        candidate = f"游客{secrets.randbelow(9000) + 1000}"
+        if await service.get_by_field("name", candidate) is None:
+            name = candidate
+            break
+    if not name:
+        raise HTTPException(status_code=500, detail="游客账号创建失败，请重试")
+
+    token = new_token()
+    account = await service.create(
+        {
+            "name": name,
+            "password_hash": hash_password(secrets.token_urlsafe(16)),
+            "session_token": token,
+        }
+    )
+    if account is None:
+        raise HTTPException(status_code=500, detail="游客账号创建失败，请重试")
+
+    payload = AuthResponse(token=token, account=AccountInfo(id=account.id, name=name))
+    await db.commit()
+    return payload
+
+
 @router.post("/logout", response_model=OkResponse)
 async def logout(data: TokenRequest, db: AsyncSession = Depends(get_db)) -> OkResponse:
     """Invalidate the current session token."""

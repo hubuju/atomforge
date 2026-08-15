@@ -193,9 +193,9 @@ export default function Index() {
         setTemplateId('');
         setTemplateChoice(null);
       }
-      toast({ title: '模板已删除' });
+      toast({ title: '项目已删除' });
     } catch (error) {
-      toast({ title: '删除模板失败', description: errorText(error), variant: 'destructive' });
+      toast({ title: '删除项目失败', description: errorText(error), variant: 'destructive' });
     }
   };
 
@@ -222,8 +222,8 @@ export default function Index() {
           workspace_id: created.id,
           version_no: 1,
           files: picked.files,
-          summary: `基于模板「${picked.label}」创建`,
-          note: '模板初始版本',
+          summary: `基于项目「${picked.label}」创建`,
+          note: '初始版本',
           keep_limit: settings.versionKeep,
           audit: '',
         });
@@ -534,11 +534,11 @@ export default function Index() {
           if (next) void loadTemplates();
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[86vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新建项目</DialogTitle>
             <DialogDescription>
-              填上首轮需求，进入工作台后会立刻开始生成；留空则可以进去再说。
+              给它起个名字，选择从内置项目起步还是让 AI 从零写，然后写下你的需求。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">
@@ -555,7 +555,7 @@ export default function Index() {
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
-                起点
+                从哪里开始
               </Label>
               <TemplatePicker
                 personal={templates}
@@ -571,7 +571,7 @@ export default function Index() {
               {suggestion ? (
                 <div className="rounded-lg border border-primary/30 bg-primary/[0.07] p-2.5">
                   <p className="text-[11.5px] leading-snug text-foreground">
-                    你的需求看起来就是「{suggestion.template.name}」。直接用模板可以省一轮生成，
+                    你的需求看起来就是「{suggestion.template.name}」。直接用这个内置项目可以省一轮生成，
                     进去之后照样能继续改。
                   </p>
                   <Button
@@ -586,7 +586,7 @@ export default function Index() {
                       });
                     }}
                   >
-                    就用这个模板
+                    就用这个项目
                   </Button>
                 </div>
               ) : null}
@@ -599,7 +599,7 @@ export default function Index() {
 
             <div className="space-y-2">
               <Label htmlFor="project-brief">
-                {templateChoice ? '想在模板上改什么（可选）' : '首轮需求（可选）'}
+                {templateChoice ? '想在这个项目上改什么（可选）' : '首轮需求（可选）'}
               </Label>
               <Textarea
                 id="project-brief"
@@ -637,22 +637,7 @@ export default function Index() {
                 <Settings2 className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               </button>
               <p className="text-[11px] text-muted-foreground">
-                点击可切换内置模型或接入你自己的 OpenAI 兼容端点，并调整创造性、拆分文件数与自动体检。
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-border bg-secondary/40 p-3">
-              <p className="flex items-center gap-1.5 text-[12px] font-semibold">
-                <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                {PROMPT_TIPS[0].title}
-              </p>
-              <p className="mt-1.5 flex gap-1.5 text-[11.5px] leading-snug text-muted-foreground">
-                <ThumbsUp className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-                {PROMPT_TIPS[0].good}
-              </p>
-              <p className="mt-1 flex gap-1.5 text-[11.5px] leading-snug text-muted-foreground/70">
-                <ThumbsDown className="mt-0.5 h-3 w-3 shrink-0" />
-                {PROMPT_TIPS[0].bad}
+                默认 DeepSeek V4 Pro。点击可切换模型或接入你自己的 OpenAI 兼容端点。
               </p>
             </div>
           </div>

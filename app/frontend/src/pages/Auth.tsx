@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, KeyRound, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Check, Ghost, KeyRound, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -81,6 +81,20 @@ export default function Auth() {
       navigate('/', { replace: true });
     } catch (error) {
       toast({ title: '登录失败', description: errorText(error), variant: 'destructive' });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleGuest = async () => {
+    setPending(true);
+    try {
+      const res = await api.guest();
+      session.signIn(res.token, res.account);
+      toast({ title: '已进入游客模式', description: '数据会保存在你的浏览器里，随时可以注册正式账号' });
+      navigate('/', { replace: true });
+    } catch (error) {
+      toast({ title: '进入失败', description: errorText(error), variant: 'destructive' });
     } finally {
       setPending(false);
     }
@@ -218,6 +232,21 @@ export default function Auth() {
                   </p>
                 </TabsContent>
               </Tabs>
+
+              <div className="mt-5 border-t border-border pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 !bg-transparent hover:!bg-transparent"
+                  onClick={handleGuest}
+                  disabled={pending}
+                >
+                  {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ghost className="h-4 w-4" />}
+                  先逛逛 · 游客体验
+                </Button>
+                <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                  不用注册，一键进入。生成、预览、版本历史全部可用。
+                </p>
+              </div>
             </div>
           </div>
         </div>

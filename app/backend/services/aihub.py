@@ -9,6 +9,7 @@ import base64
 import io
 import json
 import logging
+import time
 from pathlib import Path
 from typing import AsyncGenerator, Optional, TYPE_CHECKING
 
@@ -163,6 +164,10 @@ class AIHubService:
         Yields:
             str: Generated text content chunk (plain text, not JSON).
         """
+        start_time = time.time()
+        first_content_at: Optional[float] = None
+        content_chars = 0
+        reason_chars = 0
         try:
             client = self._require_ai_client()
             messages = [self._convert_message(msg) for msg in request.messages]
@@ -176,12 +181,31 @@ class AIHubService:
             )
 
             async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                if not chunk.choices or not chunk.choices[0].delta:
+                    continue
+                delta = chunk.choices[0].delta
+                dump = getattr(delta, "model_dump", None)
+                data = dump() if callable(dump) else {}
+                if data.get("reasoning_content"):
+                    reason_chars += len(data["reasoning_content"])
+                content = data.get("content")
+                if content:
+                    if first_content_at is None:
+                        first_content_at = time.time() - start_time
+                    content_chars += len(content)
+                    yield content
 
         except Exception as e:
-            logger.error(f"gentxt_stream error: {e}")
+            elapsed = time.time() - start_time
+            logger.error(f"[AI] model={request.model} failed after {elapsed:.1f}s: {e}")
             raise
+        finally:
+            elapsed = time.time() - start_time
+            ttft = f"{first_content_at:.1f}s" if first_content_at is not None else "-"
+            logger.info(
+                f"[AI] model={request.model} ttft={ttft} total={elapsed:.1f}s "
+                f"content={content_chars}chars reasoning={reason_chars}chars"
+            )
 
     @staticmethod
     def _extract_image_ref(item: object) -> str:

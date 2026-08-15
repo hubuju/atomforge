@@ -348,7 +348,7 @@ ${upcoming}
   ];
 }
 
-/** Strip strings, template literals and comments so brace counting works. */
+/** Strip strings, template literals, regex literals and comments so brace counting works. */
 function stripNoise(source: string): string {
   let out = '';
   let i = 0;
@@ -382,6 +382,34 @@ function stripNoise(source: string): string {
       }
       out += '""';
       continue;
+    }
+    if (ch === '/' && next !== '/' && next !== '*') {
+      // Heuristic regex literal: a '/' that follows an operator / opening
+      // bracket starts a regex, not a division. Regexes like /}/g or
+      // /https?:\/\// used to be miscounted as unbalanced braces (or the
+      // inner // swallowed as a line comment), which wrongly triggered
+      // "file truncated" continuation rounds.
+      const prev = out.length ? out[out.length - 1] : ' ';
+      if (/[(=,:;!&|?{}[\n]/.test(prev)) {
+        i += 1;
+        let inClass = false;
+        while (i < n) {
+          const c = source[i];
+          if (c === '\\') {
+            i += 2;
+            continue;
+          }
+          if (c === '[') inClass = true;
+          else if (c === ']') inClass = false;
+          else if (c === '/' && !inClass) {
+            i += 1;
+            break;
+          } else if (c === '\n' && !inClass) break;
+          i += 1;
+        }
+        out += '""';
+        continue;
+      }
     }
     out += ch;
     i += 1;

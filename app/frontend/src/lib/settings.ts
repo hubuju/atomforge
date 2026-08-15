@@ -158,7 +158,9 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   autoAudit: true,
   autoFix: true,
   multiAgent: true,
-  confirmSpec: true,
+  // Off by default: pausing for spec review feels like a hang when the user
+  // expects one-shot generation. Opt in from settings.
+  confirmSpec: false,
   // Off by default: the Reviewer/Fixer loop costs extra rounds and the
   // user prefers speed; static + runtime self-checks still run regardless.
   reviewFix: false,
@@ -228,7 +230,8 @@ export function loadSettings(): ModelSettings {
       autoAudit: parsed.autoAudit !== false,
       autoFix: parsed.autoFix !== false,
       multiAgent: parsed.multiAgent !== false,
-      confirmSpec: parsed.confirmSpec !== false,
+      // Opt-in (default off): only explicit `true` enables the pause.
+      confirmSpec: parsed.confirmSpec === true,
       // Opt-in (default off): only an explicit `true` enables the loop.
       reviewFix: parsed.reviewFix === true,
       roleModels: normalizeRoleModels(parsed.roleModels),

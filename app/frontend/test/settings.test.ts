@@ -108,12 +108,13 @@ describe('loadSettings', () => {
     expect(loadSettings().model).toBe(DEFAULT_SETTINGS.model);
   });
 
-  it('开关类字段默认开启，只有显式 false 才关闭', () => {
+  it('开关类字段默认开启，只有显式 false 才关闭；规格确认与审查默认关闭', () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ model: 'deepseek-v4-pro' }));
     const loaded = loadSettings();
     expect(loaded.autoAudit).toBe(true);
     expect(loaded.multiAgent).toBe(true);
-    expect(loaded.confirmSpec).toBe(true);
+    expect(loaded.confirmSpec).toBe(false);
+    expect(loaded.reviewFix).toBe(false);
   });
 
   it('角色模型字段被补齐成四个键', () => {

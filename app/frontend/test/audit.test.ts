@@ -163,6 +163,23 @@ describe('staticAudit — 各类缺陷', () => {
     expect(check(staticAudit(files), 'js-balance').level).toBe('pass');
   });
 
+  it('正则字面量里的括号与 // 不会造成误判', () => {
+    const files: ProjectFile[] = [
+      healthy[0],
+      healthy[1],
+      {
+        path: 'app.js',
+        content: [
+          "var url = location.href.replace(/https?:\\/\\//, '');",
+          "var cleaned = '{}'.replace(/}/g, ')');",
+          'function boot() { return cleaned + url; }',
+          'boot();',
+        ].join('\n'),
+      },
+    ];
+    expect(check(staticAudit(files), 'js-balance').level).toBe('pass');
+  });
+
   it('留下 TODO 占位只算警告', () => {
     const files: ProjectFile[] = [
       healthy[0],

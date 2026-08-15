@@ -4,6 +4,7 @@ import {
   actionableFindings,
   coderMessages,
   extractJson,
+  fileLooksComplete,
   fixerMessages,
   parseFindings,
   parseSpec,
@@ -193,6 +194,33 @@ describe('coderMessages', () => {
     });
     expect(messages[1].content).toContain('最小必要改动');
     expect(messages[1].content).toContain('body { color: red; }');
+  });
+});
+
+describe('fileLooksComplete', () => {
+  it('HTML 以 </html> 结尾才算完整', () => {
+    expect(fileLooksComplete('<!DOCTYPE html><html><body>x</body></html>', 'index.html')).toBe(true);
+    expect(fileLooksComplete('<html><body>x', 'index.html')).toBe(false);
+  });
+
+  it('含正则字面量的 JS 不误判为括号不配平', () => {
+    const js = `var url = location.href;
+var clean = url.replace(/https?:\\/\\//, '');
+var braces = '{}'.replace(/}/g, ')');
+function ok() { return clean + braces; }
+ok();`;
+    expect(fileLooksComplete(js, 'app.js')).toBe(true);
+  });
+
+  it('正则里的 // 不误判为行注释吞掉后续代码', () => {
+    const js = `var re = /https?:\\/\\//i;
+var n = 1 + 2;
+console.log(re, n);`;
+    expect(fileLooksComplete(js, 'app.js')).toBe(true);
+  });
+
+  it('真正截断的 JS（括号未闭合）判不完整', () => {
+    expect(fileLooksComplete('function run() {\n  var a = 1;\n', 'app.js')).toBe(false);
   });
 });
 

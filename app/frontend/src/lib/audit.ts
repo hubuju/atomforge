@@ -54,7 +54,7 @@ function pass(id: string, label: string, detail: string): AuditCheck {
   return { id, label, level: 'pass', detail };
 }
 
-/** Strip strings, template literals and comments so brace counting is usable. */
+/** Strip strings, template literals, regex literals and comments so brace counting is usable. */
 function stripNoise(source: string): string {
   let out = '';
   let i = 0;
@@ -88,6 +88,33 @@ function stripNoise(source: string): string {
       }
       out += '""';
       continue;
+    }
+    if (ch === '/' && next !== '/' && next !== '*') {
+      // Heuristic regex literal (same logic as roles.ts): a '/' after an
+      // operator starts a regex, not a division. Without this, /}/g-style
+      // regexes miscount braces and cause false "script truncated" errors,
+      // which then trigger pointless auto-repair rounds.
+      const prev = out.length ? out[out.length - 1] : ' ';
+      if (/[(=,:;!&|?{}[\n]/.test(prev)) {
+        i += 1;
+        let inClass = false;
+        while (i < n) {
+          const c = source[i];
+          if (c === '\\') {
+            i += 2;
+            continue;
+          }
+          if (c === '[') inClass = true;
+          else if (c === ']') inClass = false;
+          else if (c === '/' && !inClass) {
+            i += 1;
+            break;
+          } else if (c === '\n' && !inClass) break;
+          i += 1;
+        }
+        out += '""';
+        continue;
+      }
     }
     out += ch;
     i += 1;

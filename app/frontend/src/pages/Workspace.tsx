@@ -673,7 +673,10 @@ export default function Workspace() {
   /** Route a new instruction to whichever mode is configured. */
   const generate = useCallback(
     async (instruction: string, kind: 'text' | 'fix' = 'text', isRepair = false) => {
-      if (settingsRef.current.multiAgent && kind === 'text' && !isRepair) {
+      // The four-role pipeline is the product; user prompts always go through
+      // it. The single-call path survives only as the internal repair
+      // transport (kind === 'fix' / isRepair).
+      if (kind === 'text' && !isRepair) {
         await generateMulti(instruction);
         return;
       }

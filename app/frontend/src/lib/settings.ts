@@ -229,7 +229,8 @@ export function loadSettings(): ModelSettings {
       ),
       autoAudit: parsed.autoAudit !== false,
       autoFix: parsed.autoFix !== false,
-      multiAgent: parsed.multiAgent !== false,
+      // The four-role pipeline is the product — always on, not a preference.
+      multiAgent: true,
       // Opt-in (default off): only explicit `true` enables the pause.
       confirmSpec: parsed.confirmSpec === true,
       // Opt-in (default off): only an explicit `true` enables the loop.

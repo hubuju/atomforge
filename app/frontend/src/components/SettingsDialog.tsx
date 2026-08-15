@@ -436,24 +436,16 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
             </div>
           ) : tab === 'agents' ? (
             <div className="space-y-4 py-1">
-              <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/25 bg-primary/[0.05] p-3">
                 <div className="min-w-0">
-                  <Label className="text-[12.5px]">启用多智能体流水线</Label>
+                  <Label className="text-[12.5px]">多智能体流水线（始终开启）</Label>
                   <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-                    规划者 → 实现者 → 审查者 → 修复者 四个角色接力。关闭后退回单次全量生成。
+                    规划者 → 实现者 → 审查者 → 修复者 四个角色接力是产品核心形态，不可关闭。下面只配置审查修复与规格确认。
                   </p>
                 </div>
-                <Switch
-                  checked={draft.multiAgent}
-                  onCheckedChange={(checked) => patch({ multiAgent: checked })}
-                />
               </div>
 
-              <div
-                className={`space-y-4 transition-opacity duration-200 ${
-                  draft.multiAgent ? '' : 'pointer-events-none opacity-50'
-                }`}
-              >
+              <div className="space-y-4">
                 <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-3">
                   <div className="min-w-0">
                     <Label className="text-[12.5px]">规格需要我确认</Label>

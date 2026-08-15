@@ -213,7 +213,7 @@ export function loadSettings(): ModelSettings {
       baseUrl: (parsed.baseUrl || '').trim(),
       apiKey: (parsed.apiKey || '').trim(),
       temperature: clamp(numeric(parsed.temperature), 0, 1, DEFAULT_SETTINGS.temperature),
-      maxFiles: Math.round(clamp(numeric(parsed.maxFiles), 3, 10, DEFAULT_SETTINGS.maxFiles)),
+      maxFiles: Math.round(clamp(numeric(parsed.maxFiles), 1, 50, DEFAULT_SETTINGS.maxFiles)),
       versionKeep: Math.round(
         clamp(numeric(parsed.versionKeep), 5, 50, DEFAULT_SETTINGS.versionKeep),
       ),

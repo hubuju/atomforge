@@ -22,6 +22,8 @@ import type { ProjectFile } from './client';
 import {
   actionableFindings,
   coderMessages,
+  continueFileMessages,
+  fileLooksComplete,
   fixerMessages,
   parseFindings,
   parseSpec,
@@ -29,6 +31,7 @@ import {
   repairJsonMessages,
   reviewerMessages,
   ROLE_META,
+  SEVERITY_LABEL,
   specDigest,
   specHeadline,
   stripCodeFence,
@@ -174,6 +177,36 @@ async function callRole(
   return raw;
 }
 
+/**
+ * A truncated file (HTML missing </html>, CSS/JS with unbalanced braces) used
+ * to ship as-is and crash the preview at the first addEventListener. When the
+ * model hits its output cap mid-file, append continuation rounds until the
+ * file looks complete — never hand the user half a file.
+ */
+async function writeFileComplete(
+  board: LaneBoard,
+  settings: ModelSettings,
+  role: 'coder' | 'fixer',
+  path: string,
+  firstMessages: ChatTurn[],
+  inputDigest: string,
+): Promise<string> {
+  let content = stripCodeFence(await callRole(board, role, settings, firstMessages, inputDigest), path);
+  for (let attempt = 0; attempt < 2 && !fileLooksComplete(content, path); attempt += 1) {
+    board.patch(role, { detail: `${path} 被截断，正在续写（${attempt + 1}/2）` });
+    const more = await callRole(
+      board,
+      role,
+      settings,
+      continueFileMessages(path, content, role),
+      `续写 ${path}`,
+    );
+    const tail = stripCodeFence(more, path);
+    content = `${content.replace(/\s+$/, '')}\n${tail}`;
+  }
+  return content;
+}
+
 /* ------------------------------------------------------------------ */
 /* Stage 1 — Planner                                                   */
 /* ------------------------------------------------------------------ */
@@ -294,10 +327,11 @@ export async function buildProject({
       const previous =
         working.find((file) => file.path.toLowerCase() === target.path.toLowerCase())?.content || '';
 
-      const raw = await callRole(
+      const content = await writeFileComplete(
         board,
-        'coder',
         settings,
+        'coder',
+        target.path,
         coderMessages({
           spec,
           target,
@@ -310,7 +344,6 @@ export async function buildProject({
         `${target.path} · ${target.purpose}`,
       );
 
-      const content = stripCodeFence(raw, target.path);
       if (!content) throw new Error(`${target.path} 写出来是空的`);
 
       working = mergeFiles(working, [{ path: target.path, content }]);
@@ -413,10 +446,11 @@ export async function buildProject({
         const file = working.find((entry) => entry.path === path);
         if (!file) continue;
 
-        const raw = await callRole(
+        const raw = await writeFileComplete(
           board,
-          'fixer',
           settings,
+          'fixer',
+          path,
           fixerMessages({ spec, file, findings: items, siblings: working }),
           items.map((item) => item.detail).join('；'),
         );
@@ -455,6 +489,11 @@ export function outcomeNarrative(spec: ProjectSpec, outcome: BuildOutcome): stri
     lines.push(`审查者提出 ${findingsSummary(outcome.findings)}。`);
     if (outcome.fixed.length) {
       lines.push(`修复者重写了 ${outcome.fixed.join('、')}。`);
+    } else if (actionableFindings(outcome.findings).length) {
+      const remaining = actionableFindings(outcome.findings)
+        .map((item) => `- [${SEVERITY_LABEL[item.severity]}] ${item.file || '全局'}：${item.detail}`)
+        .join('\n');
+      lines.push(`修复轮次已用完，以下问题仍未解决：\n${remaining}`);
     } else {
       lines.push('其中没有需要动代码的阻塞项。');
     }

@@ -425,14 +425,16 @@ async function streamViaAtoms(
   onDelta: (delta: string) => void,
 ): Promise<string> {
   const model = settings.model || DEFAULT_SETTINGS.model;
-  // DeepSeek's reasoning model rejects temperature; leave it out for it.
+  // DeepSeek V4 runs in thinking mode by default, where temperature is
+  // accepted but ignored — leave it out for built-in models. V4 allows up to
+  // 384K output tokens; 64K comfortably covers a multi-file project while
+  // still capping runaway output.
   const body: Record<string, unknown> = {
     messages,
     model,
     stream: true,
-    max_tokens: 8192,
+    max_tokens: 65536,
   };
-  if (!/reasoner/i.test(model)) body.temperature = settings.temperature;
 
   let response: Response;
   try {
@@ -632,9 +634,22 @@ export async function runGeneration({
 
   const round = async (turns: ChatTurn[]) => {
     live = '';
+    // parseStream re-parses the whole buffer on every token; throttle the
+    // live panel updates to ~8Hz or every 600 chars, whichever comes first,
+    // so long streams stay smooth instead of freezing the tab.
+    let lastEmit = 0;
+    let pendingChars = 0;
+    const throttledEmit = () => {
+      const now = Date.now();
+      if (now - lastEmit < 120 && pendingChars < 600) return;
+      lastEmit = now;
+      pendingChars = 0;
+      emit();
+    };
     const raw = await streamChat(turns, settings, (delta) => {
       live += delta;
-      emit();
+      pendingChars += delta.length;
+      throttledEmit();
     });
     live = '';
     accumulated = accumulated ? joinWithoutOverlap(accumulated, raw) : raw;

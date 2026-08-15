@@ -238,6 +238,15 @@ export default function Workspace() {
   const repairGuard = useRef(false);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  /** Latest runtime error seen from the sandbox (drives the auto repair). */
+  const runtimeErrorRef = useRef<PreviewError | null>(null);
+  /** Debounce timer collecting an error burst into a single repair round. */
+  const errorRepairTimer = useRef<number | null>(null);
+  const generatingRef = useRef(false);
+
+  useEffect(() => {
+    generatingRef.current = generating;
+  }, [generating]);
 
   const ready = session.status === 'authenticated';
 
@@ -653,18 +662,43 @@ export default function Workspace() {
 
       if (payload.type === 'ready') {
         setRuntimeError(null);
+        runtimeErrorRef.current = null;
         return;
       }
       if (payload.type === 'error') {
         setRuntimeError(payload.error);
+        runtimeErrorRef.current = payload.error;
+        // Runtime errors feed an automatic repair round instead of waiting
+        // for the user to click "让 AI 修". A burst of errors (the same
+        // crash often reports several lines) collapses into ONE round.
+        const active = settingsRef.current;
+        if (active.autoFix && !repairGuard.current && !generatingRef.current) {
+          if (errorRepairTimer.current !== null) window.clearTimeout(errorRepairTimer.current);
+          errorRepairTimer.current = window.setTimeout(() => {
+            errorRepairTimer.current = null;
+            if (repairGuard.current || generatingRef.current) return;
+            const latest = runtimeErrorRef.current;
+            if (!latest) return;
+            repairGuard.current = true;
+            void generateRef.current(
+              `预览运行时报错，请定位并修复：${latest.message}${
+                latest.line ? `（行 ${latest.line}）` : ''
+              }\n\n重点排查：逐一检查 app.js 中所有 addEventListener / getElementById / querySelector，
+              确认对应的元素 id 真实存在于 index.html；缺失的元素要么补上，要么加判空保护。
+              修复后重新输出被改动文件的完整内容。`,
+              'fix',
+              true,
+            );
+          }, 900);
+        }
         return;
       }
       if (payload.type !== 'report' || !isRuntimeReport(payload.report)) return;
 
       const base = staticChecks.current;
-      if (!base.length) return;
-
-      const merged = mergeAudit(base, runtimeAudit(payload.report, files));
+      const merged = base.length
+        ? mergeAudit(base, runtimeAudit(payload.report, files))
+        : mergeAudit([], runtimeAudit(payload.report, files));
       setAudit(merged);
       setAuditPending(false);
       setAuditVisible(true);
@@ -1385,35 +1419,13 @@ export default function Workspace() {
               {/* Source files */}
               {view !== 'preview' ? (
                 <div className="flex min-h-0 flex-col border-b border-border xl:border-b-0 xl:border-r">
-                  <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card/40 px-2 py-1.5">
-                    {displayFiles.length === 0 ? (
-                      <span className="px-1 text-[11.5px] text-muted-foreground">还没有文件</span>
-                    ) : (
-                      displayFiles.map((file) => (
-                        <button
-                          key={file.path}
-                          type="button"
-                          onClick={() => {
-                            setActivePath(file.path);
-                            setEditing(false);
-                          }}
-                          className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 font-code text-[11.5px] transition-colors ease-out-quart duration-200 ${
-                            activeFile?.path === file.path
-                              ? 'border-primary/40 bg-primary/10 text-foreground'
-                              : 'border-transparent text-muted-foreground hover:md:border-border hover:md:text-foreground'
-                          }`}
-                        >
-                          <FileCode2 className={`h-3 w-3 ${FILE_TONE[fileLang(file.path)]}`} />
-                          {file.path}
-                          {streaming?.writing === file.path ? (
-                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          ) : null}
-                        </button>
-                      ))
-                    )}
+                  <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-card/40 px-2">
+                    <span className="pl-1 text-[11px] text-muted-foreground">
+                      {displayFiles.length ? `项目文件 · ${displayFiles.length}` : '还没有文件'}
+                    </span>
 
                     {activeFile ? (
-                      <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1471,27 +1483,55 @@ export default function Workspace() {
                     ) : null}
                   </div>
 
-                  <div className="min-h-0 flex-1">
-                    {!activeFile ? (
-                      <div className="grid h-full place-items-center px-6 text-center">
-                        <p className="text-[12.5px] text-muted-foreground">
-                          生成完成后，这里会按文件展示源码。
-                        </p>
-                      </div>
-                    ) : editing ? (
-                      <Textarea
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        spellCheck={false}
-                        className="h-full w-full resize-none rounded-none border-0 bg-[hsl(80_6%_8%)] font-code text-[12.5px] leading-[1.65] focus-visible:ring-0"
-                      />
-                    ) : (
-                      <CodeViewer
-                        path={activeFile.path}
-                        content={activeFile.content}
-                        streaming={streaming?.writing === activeFile.path}
-                      />
-                    )}
+                  <div className="flex min-h-0 flex-1">
+                    {/* File tree */}
+                    <div className="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-border bg-card/30 py-1.5">
+                      {displayFiles.map((file) => (
+                        <button
+                          key={file.path}
+                          type="button"
+                          onClick={() => {
+                            setActivePath(file.path);
+                            setEditing(false);
+                          }}
+                          className={`flex items-center gap-2 border-l-2 px-3 py-1.5 text-left font-code text-[11.5px] transition-colors ease-out-quart duration-200 ${
+                            activeFile?.path === file.path
+                              ? 'border-primary bg-primary/[0.08] text-foreground'
+                              : 'border-transparent text-muted-foreground hover:md:bg-secondary/40 hover:md:text-foreground'
+                          }`}
+                        >
+                          <FileCode2 className={`h-3.5 w-3.5 shrink-0 ${FILE_TONE[fileLang(file.path)]}`} />
+                          <span className="truncate">{file.path}</span>
+                          {streaming?.writing === file.path ? (
+                            <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-primary" />
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* File content */}
+                    <div className="min-h-0 flex-1">
+                      {!activeFile ? (
+                        <div className="grid h-full place-items-center px-6 text-center">
+                          <p className="text-[12.5px] text-muted-foreground">
+                            生成完成后，这里会按文件展示源码。
+                          </p>
+                        </div>
+                      ) : editing ? (
+                        <Textarea
+                          value={draft}
+                          onChange={(event) => setDraft(event.target.value)}
+                          spellCheck={false}
+                          className="h-full w-full resize-none rounded-none border-0 bg-[hsl(80_6%_8%)] font-code text-[12.5px] leading-[1.65] focus-visible:ring-0"
+                        />
+                      ) : (
+                        <CodeViewer
+                          path={activeFile.path}
+                          content={activeFile.content}
+                          streaming={streaming?.writing === activeFile.path}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border bg-card/40 px-3 text-[10.5px] text-muted-foreground">

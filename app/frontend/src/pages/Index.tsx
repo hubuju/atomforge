@@ -534,25 +534,74 @@ export default function Index() {
           if (next) void loadTemplates();
         }}
       >
-        <DialogContent className="sm:max-w-lg max-h-[86vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[86vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新建项目</DialogTitle>
             <DialogDescription>
               给它起个名字，选择从内置项目起步还是让 AI 从零写，然后写下你的需求。
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-1">
-            <div className="space-y-2">
-              <Label htmlFor="project-name">项目名称</Label>
-              <Input
-                id="project-name"
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-                placeholder="例如：番茄钟计时器"
-                autoFocus
-              />
+          <div className="grid gap-5 py-1 lg:grid-cols-5">
+            {/* Left column: name, brief, model */}
+            <div className="space-y-4 lg:col-span-2">
+              <div className="space-y-2">
+                <Label htmlFor="project-name">项目名称</Label>
+                <Input
+                  id="project-name"
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  placeholder="例如：番茄钟计时器"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="project-brief">
+                  {templateChoice ? '想在这个项目上改什么（可选）' : '首轮需求（可选）'}
+                </Label>
+                <Textarea
+                  id="project-brief"
+                  value={newBrief}
+                  onChange={(event) => setNewBrief(event.target.value)}
+                  placeholder={placeholderIdea}
+                  rows={7}
+                  className="resize-none leading-relaxed"
+                />
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {STARTER_IDEAS.map((idea) => (
+                    <button
+                      key={idea}
+                      type="button"
+                      onClick={() => setNewBrief(idea)}
+                      className="rounded-md border border-border bg-secondary/50 px-2 py-1 text-[11px] text-muted-foreground transition-colors ease-out-quart duration-200 hover:md:border-primary/40 hover:md:text-foreground"
+                    >
+                      {idea.slice(0, 12)}…
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>生成模型</Label>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                  className="flex h-9 w-full items-center gap-2 rounded-md border border-border bg-transparent px-3 text-left transition-colors ease-out-quart duration-200 hover:md:border-primary/40"
+                >
+                  <span className="truncate text-[13px] font-medium">{settingsLabel(settings)}</span>
+                  <span className="shrink-0 rounded border border-primary/30 bg-primary/10 px-1 py-px text-[10px] text-primary">
+                    {settingsTagline(settings)}
+                  </span>
+                  <Settings2 className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  默认 DeepSeek V4 Pro。点击可切换模型或接入你自己的 OpenAI 兼容端点。
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Right column: starter projects */}
+            <div className="space-y-2 lg:col-span-3">
               <Label className="flex items-center gap-1.5">
                 <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
                 从哪里开始
@@ -594,50 +643,6 @@ export default function Index() {
                 {templateChoice
                   ? `选了「${templateChoice.label}」：进入工作台后代码已经能跑，直接说需求就能继续改。`
                   : '选「让 AI 从零写」则由四角色流水线按你的需求现写。'}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="project-brief">
-                {templateChoice ? '想在这个项目上改什么（可选）' : '首轮需求（可选）'}
-              </Label>
-              <Textarea
-                id="project-brief"
-                value={newBrief}
-                onChange={(event) => setNewBrief(event.target.value)}
-                placeholder={placeholderIdea}
-                rows={4}
-                className="resize-none leading-relaxed"
-              />
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                {STARTER_IDEAS.map((idea) => (
-                  <button
-                    key={idea}
-                    type="button"
-                    onClick={() => setNewBrief(idea)}
-                    className="rounded-md border border-border bg-secondary/50 px-2 py-1 text-[11px] text-muted-foreground transition-colors ease-out-quart duration-200 hover:md:border-primary/40 hover:md:text-foreground"
-                  >
-                    {idea.slice(0, 12)}…
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>生成模型</Label>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="flex h-9 w-full items-center gap-2 rounded-md border border-border bg-transparent px-3 text-left transition-colors ease-out-quart duration-200 hover:md:border-primary/40"
-              >
-                <span className="truncate text-[13px] font-medium">{settingsLabel(settings)}</span>
-                <span className="shrink-0 rounded border border-primary/30 bg-primary/10 px-1 py-px text-[10px] text-primary">
-                  {settingsTagline(settings)}
-                </span>
-                <Settings2 className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              </button>
-              <p className="text-[11px] text-muted-foreground">
-                默认 DeepSeek V4 Pro。点击可切换模型或接入你自己的 OpenAI 兼容端点。
               </p>
             </div>
           </div>

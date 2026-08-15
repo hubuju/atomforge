@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/v1/hub", tags=["hub"])
 
 PBKDF2_ROUNDS = 120000
 SLUG_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
-MAX_FILES = 12
+MAX_FILES = 50
 MAX_TEMPLATES = 30
 DEFAULT_VERSION_KEEP = 20
 

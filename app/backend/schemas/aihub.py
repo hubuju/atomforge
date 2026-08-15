@@ -51,7 +51,7 @@ class GenTxtRequest(BaseModel):
     model: str = Field(default="deepseek-v4-pro", description="Model name")
     stream: bool = Field(default=False, description="Whether to enable streaming output.")
     temperature: Optional[float] = Field(default=0.7, description="Sampling temperature (0-2).")
-    max_tokens: Optional[int] = Field(default=4096, description="Maximum number of generated tokens.")
+    max_tokens: Optional[int] = Field(default=65536, description="Maximum number of generated tokens.")
 
 
 class GenTxtResponse(BaseModel):

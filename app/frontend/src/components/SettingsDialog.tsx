@@ -362,25 +362,6 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[12px] font-normal">创造性</Label>
-                    <span className="nums-tabular font-code text-[11px] text-muted-foreground">
-                      {draft.temperature.toFixed(2)}
-                    </span>
-                  </div>
-                  <Slider
-                    value={[draft.temperature]}
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    onValueChange={(next) => patch({ temperature: next[0] })}
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    低更稳定可复现，高更有想象力。改代码建议 0.2-0.4。
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
                     <Label className="text-[12px] font-normal">最多拆分文件数</Label>
                     <span className="nums-tabular font-code text-[11px] text-muted-foreground">
                       {draft.maxFiles}
@@ -388,13 +369,13 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
                   </div>
                   <Slider
                     value={[draft.maxFiles]}
-                    min={3}
-                    max={10}
+                    min={1}
+                    max={50}
                     step={1}
                     onValueChange={(next) => patch({ maxFiles: Math.round(next[0]) })}
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    这条会写进提示词，直接决定项目被拆成几个文件。
+                    这条会写进提示词，作为项目拆分的参考上限，不再强制。
                   </p>
                 </div>
 
@@ -510,7 +491,7 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
                 <div className="space-y-2">
                   <Label className="text-[12.5px]">按角色指定模型</Label>
                   <p className="text-[11px] leading-snug text-muted-foreground">
-                    留空表示继承默认模型。传输方式、Key 与创造性始终共用，所以单独换模型不会影响连通性。
+                    留空表示继承默认模型。传输方式与 Key 始终共用，所以单独换模型不会影响连通性。
                   </p>
 
                   <div className="space-y-2">

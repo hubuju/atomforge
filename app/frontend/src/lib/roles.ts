@@ -264,9 +264,9 @@ const CODER_SYSTEM = `你是 AtomForge 流水线里的「实现者（Coder）」
 - 第一个字符就是文件内容本身，不要写任何解释，不要 markdown 围栏，不要重复文件名。
 - 严格实现规格里属于本文件的职责，不要越界替其他文件写逻辑。
 - 引用其他文件里的函数或元素 id 时，必须与已给出的兄弟文件保持完全一致。
+- 必须把文件写到真正结束：HTML 要写到 </html>，CSS/JS 的所有括号都要闭合，不留半截内容。
 
-${SHARED_CODE_RULES}
-- 单个文件控制在 420 行以内。`;
+${SHARED_CODE_RULES}`;
 
 function fileContext(files: ProjectFile[], skipPath: string): string {
   const others = files.filter((file) => file.path.toLowerCase() !== skipPath.toLowerCase());
@@ -324,12 +324,108 @@ ${upcoming}
   ];
 }
 
+/** Strip strings, template literals and comments so brace counting works. */
+function stripNoise(source: string): string {
+  let out = '';
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (ch === '/' && next === '/') {
+      while (i < n && source[i] !== '\n') i += 1;
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      i += 2;
+      while (i < n && !(source[i] === '*' && source[i + 1] === '/')) i += 1;
+      i += 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      const quote = ch;
+      i += 1;
+      while (i < n) {
+        if (source[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (source[i] === quote) {
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
+      out += '""';
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+function balance(source: string, open: string, close: string): number {
+  let depth = 0;
+  for (const ch of source) {
+    if (ch === open) depth += 1;
+    else if (ch === close) depth -= 1;
+  }
+  return depth;
+}
+
+/**
+ * Best-effort "did the model finish this file?" check. A truncated HTML loses
+ * its closing tag, a truncated CSS/JS stops mid-brace. This is the exact
+ * failure mode that used to ship half files and crash the preview with
+ * `Cannot read properties of null`.
+ */
+export function fileLooksComplete(content: string, path: string): boolean {
+  const text = content.trim();
+  if (!text) return false;
+  if (fileLang(path) === 'html') return /<\/html\s*>/i.test(text);
+  if (fileLang(path) === 'css') {
+    const clean = stripNoise(text);
+    return balance(clean, '{', '}') === 0;
+  }
+  if (fileLang(path) === 'js') {
+    const clean = stripNoise(text);
+    return balance(clean, '{', '}') === 0 && balance(clean, '(', ')') === 0;
+  }
+  return true;
+}
+
+/** Ask the model to continue a file that was cut off mid-write. */
+export function continueFileMessages(
+  path: string,
+  written: string,
+  role: 'coder' | 'fixer',
+): ChatTurn[] {
+  const tail = written.slice(-800);
+  return [
+    {
+      role: 'system',
+      content:
+        role === 'coder'
+          ? `你是 AtomForge 流水线里的「实现者（Coder）」。上一个回答在文件写到一半时被截断了，请**紧接着断点继续输出剩余内容**，把文件写到真正结束（HTML 到 </html>，CSS/JS 括号全部闭合）。只输出剩余部分，不要重复已输出的内容，不要解释，不要围栏。`
+          : `你是 AtomForge 流水线里的「修复者（Fixer）」。上一个回答在文件写到一半时被截断了，请**紧接着断点继续输出剩余内容**，把文件写到真正结束。只输出剩余部分，不要重复已输出的内容，不要解释，不要围栏。`,
+    },
+    {
+      role: 'user',
+      content: `文件 ${path} 已输出内容的结尾是：
+
+${tail}
+
+请直接从断点的下一个字符继续，输出该文件的剩余部分。`,
+    },
+  ];
+}
+
 /**
  * Strip whatever wrapper the model added around a single file's content.
  * Coder and Fixer are told to emit raw code, but models occasionally add a
  * fence or a `<<<FILE>>>` header out of habit.
- */
-export function stripCodeFence(raw: string, path: string): string {
+ */export function stripCodeFence(raw: string, path: string): string {
   let text = raw.trim();
 
   const block = text.match(/<<<FILE[^>]*>>>([\s\S]*?)(?:<<<END>>>|$)/i);
@@ -353,20 +449,21 @@ export function stripCodeFence(raw: string, path: string): string {
 /* Reviewer                                                            */
 /* ------------------------------------------------------------------ */
 
-const REVIEWER_SYSTEM = `你是 AtomForge 流水线里的「审查者（Reviewer）」。你不写代码，只对照规格挑毛病。
+const REVIEWER_SYSTEM = `你是 AtomForge 流水线里的「审查者（Reviewer）」。你不写代码，只对照规格挑**真问题**。
 
 只输出一个 JSON 对象，第一个字符必须是 {，不要解释，不要围栏：
 { "findings": [ { "severity": "blocker", "file": "app.js", "detail": "问题是什么", "suggestion": "该怎么改" } ] }
 
-severity 判定标准：
-- blocker：会让功能直接不可用。例如引用了不存在的函数或元素 id、按钮没有绑定事件、脚本明显不闭合、规格里的核心交互完全没实现。
-- major：能跑但明显偏离规格，或存在边界错误（空数据崩溃、数值不校验、状态不同步）。
-- minor：样式、文案、可访问性等打磨项。
+severity 判定标准（宁缺毋滥）：
+- blocker：功能直接不可用。例如引用了不存在的函数或元素 id、按钮没有绑定事件、脚本不闭合、HTML 没有写完、规格里的核心交互完全没实现。
+- major：能跑但明显偏离规格，或存在确定会触发的崩溃（空数据崩溃、必需元素缺失）。
 
-要求：
-- detail 必须具体指出位置或标识符，不要写"部分逻辑有问题"这种空话。
-- 最多 8 条，按严重度从高到低排列。
-- 确认没有问题时输出 { "findings": [] }，不要为了凑数而编造问题。`;
+严格要求：
+- **禁止**为凑数而报问题：样式细节、文案措辞、可读性、性能微调等打磨项一律不要报。
+- 只有当你能指出具体文件、具体标识符、具体后果时才报。
+- detail 必须具体到位置或标识符，例如「app.js 里 document.getElementById('xxx') 对应元素在 index.html 中不存在」。
+- 最多 5 条，按严重度从高到低排列。
+- 确认没有问题时输出 { "findings": [] }，这完全是可接受的结论。`;
 
 export function reviewerMessages(
   spec: ProjectSpec,

@@ -1132,9 +1132,9 @@ export default function Workspace() {
           }
         />
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,400px)_1fr]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(340px,400px)_minmax(0,1fr)]">
           {/* Conversation */}
-          <section className="flex min-h-0 flex-col border-b border-border lg:border-b-0 lg:border-r">
+          <section className="flex min-h-0 min-w-0 flex-col border-b border-border lg:border-b-0 lg:border-r">
             <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <span className="text-[12.5px] font-medium">对话</span>
@@ -1283,7 +1283,7 @@ export default function Workspace() {
           </section>
 
           {/* Files + preview */}
-          <section className="flex min-h-0 flex-col">
+          <section className="flex min-h-0 min-w-0 flex-col">
             <div className="flex h-11 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3">
               <div className="flex items-center gap-0.5 rounded-lg border border-border bg-secondary/50 p-0.5">
                 {(
@@ -1550,7 +1550,7 @@ export default function Workspace() {
                     </div>
 
                     {/* File content */}
-                    <div className="min-h-0 flex-1">
+                    <div className="min-h-0 min-w-0 flex-1">
                       {!activeFile ? (
                         <div className="grid h-full place-items-center px-6 text-center">
                           <p className="text-[12.5px] text-muted-foreground">

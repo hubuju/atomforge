@@ -268,8 +268,14 @@ const CODER_SYSTEM = `你是 AtomForge 流水线里的「实现者（Coder）」
 
 ${SHARED_CODE_RULES}`;
 
-function fileContext(files: ProjectFile[], skipPath: string): string {
-  const others = files.filter((file) => file.path.toLowerCase() !== skipPath.toLowerCase());
+function fileContext(files: ProjectFile[], skipPath: string, targetLang?: FileLang): string {
+  let others = files.filter((file) => file.path.toLowerCase() !== skipPath.toLowerCase());
+  // A JS file never consumes CSS classes; dropping styles from its sibling
+  // context trims thousands of characters per request without losing any
+  // information the code can actually depend on.
+  if (targetLang === 'js') {
+    others = others.filter((file) => fileLang(file.path) !== 'css');
+  }
   if (!others.length) return '（还没有其他文件）';
   return others
     .map((file) => `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`)
@@ -334,7 +340,7 @@ ${specDigest(spec)}
 
 已经写好的文件（保持接口一致）：
 
-${fileContext(written, target.path)}
+${fileContext(written, target.path, fileLang(target.path))}
 ${idContract}
 
 ${upcoming}
@@ -666,7 +672,7 @@ ${list}
 
 其他文件（只读，用于保持接口一致）：
 
-${fileContext(siblings, file.path)}
+${fileContext(siblings, file.path, fileLang(file.path))}
 
 只输出修复后的 ${file.path} 完整内容。`,
     },

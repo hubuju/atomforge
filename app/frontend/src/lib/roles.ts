@@ -17,7 +17,7 @@
  */
 
 import type { ChatTurn } from './agent';
-import { fileLang } from './bundler';
+import { fileLang, type FileLang } from './bundler';
 import type { ProjectFile } from './client';
 import type { RoleId } from './settings';
 

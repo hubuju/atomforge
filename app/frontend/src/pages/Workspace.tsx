@@ -1204,46 +1204,34 @@ export default function Workspace() {
                   </div>
                 ) : null}
 
-                {/* Transcript order: question(s) → execution lanes → answer.
-                    The lanes describe the round, so they render between the
-                    user prompt and the assistant's delivery report. */}
-                {(() => {
-                  const last = chatBubbles.length ? chatBubbles[chatBubbles.length - 1] : null;
-                  const hasTailAnswer = Boolean(last && last.role === 'assistant');
-                  const rest = hasTailAnswer ? chatBubbles.slice(0, -1) : chatBubbles;
-                  const tail = hasTailAnswer ? (last as NonNullable<typeof last>) : null;
-
-                  const bubble = (row: (typeof chatBubbles)[number]) => (
+                {/* Simplest correct order: the transcript renders as-is
+                    (questions and answers in time order), the execution lanes
+                    of the current/latest round sit right after it, then the
+                    live streaming bubble while a round is running. */}
+                {chatBubbles.map((row) => (
+                  <div
+                    key={row.key}
+                    className={row.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
+                  >
                     <div
-                      key={row.key}
-                      className={row.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
+                      className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${
+                        row.role === 'user'
+                          ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
+                          : 'border border-border bg-card text-muted-foreground'
+                      }`}
                     >
-                      <div
-                        className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${
-                          row.role === 'user'
-                            ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
-                            : 'border border-border bg-card text-muted-foreground'
-                        }`}
-                      >
-                        {row.kind === 'fix' ? (
-                          <span className="mb-1 flex items-center gap-1 text-[11px] text-destructive">
-                            <Wrench className="h-3 w-3" />
-                            修错请求
-                          </span>
-                        ) : null}
-                        <p className="whitespace-pre-wrap">{row.content}</p>
-                      </div>
+                      {row.kind === 'fix' ? (
+                        <span className="mb-1 flex items-center gap-1 text-[11px] text-destructive">
+                          <Wrench className="h-3 w-3" />
+                          修错请求
+                        </span>
+                      ) : null}
+                      <p className="whitespace-pre-wrap">{row.content}</p>
                     </div>
-                  );
+                  </div>
+                ))}
 
-                  return (
-                    <>
-                      {rest.map(bubble)}
-                      {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
-                      {tail ? bubble(tail) : null}
-                    </>
-                  );
-                })()}
+                {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
 
                 {pendingPlan ? (
                   <SpecPanel

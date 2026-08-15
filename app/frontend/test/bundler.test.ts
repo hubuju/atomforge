@@ -112,6 +112,46 @@ describe('bundleForPreview', () => {
     expect(bundleForPreview(moduleProject)).toContain('<script data-src="app.js" type="module">');
   });
 
+  it('defer 脚本内联后被包进 DOMContentLoaded，恢复 DOM 就绪语义', () => {
+    // 内联 <script> 上的 defer 无效：若不包裹，脚本会在 <head> 里立即执行，
+    // 此时 body 尚未解析，getElementById 全是 null（经典的运行时崩溃）。
+    const deferred = bundleForPreview([
+      {
+        path: ENTRY_FILE,
+        content: '<html><head><script src="app.js" defer></script></head><body><button id="b">x</button></body></html>',
+      },
+      { path: 'app.js', content: "document.getElementById('b').addEventListener('click', fn);" },
+    ]);
+    expect(deferred).toContain("addEventListener('DOMContentLoaded'");
+    expect(deferred).toContain("getElementById('b')");
+  });
+
+  it('不带 defer 的脚本保持立即执行语义，不做包裹', () => {
+    const immediate = bundleForPreview([
+      {
+        path: ENTRY_FILE,
+        content: '<html><body><script src="app.js"></script></body></html>',
+      },
+      { path: 'app.js', content: 'window.ready = true;' },
+    ]);
+    expect(immediate).not.toContain("addEventListener('DOMContentLoaded'");
+    expect(immediate).toContain('window.ready = true;');
+  });
+
+  it('内容里的 </script> / </style> 字符串被转义，不会提前闭合内联块', () => {
+    const escaped = bundleForPreview([
+      {
+        path: ENTRY_FILE,
+        content: '<html><head><link rel="stylesheet" href="styles.css"><script src="app.js" defer></script></head><body></body></html>',
+      },
+      { path: 'styles.css', content: '.x::after { content: "</style>"; }' },
+      { path: 'app.js', content: "el.innerHTML = '</script><p>hi</p>';" },
+    ]);
+    expect(escaped).toContain('<\\/style>');
+    expect(escaped).toContain('<\\/script>');
+    expect(escaped).not.toContain('</script><p>hi</p>');
+  });
+
   it('没有入口文件时返回空串', () => {
     expect(bundleForPreview([])).toBe('');
     expect(bundleForPreview([{ path: 'app.js', content: 'x' }])).toBe('');

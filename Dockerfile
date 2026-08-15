@@ -3,7 +3,7 @@
 # ==================== Stage 1: build the frontend ====================
 FROM node:20-alpine AS frontend-build
 WORKDIR /build
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 COPY app/frontend/package.json app/frontend/pnpm-lock.yaml ./
 RUN pnpm install --no-frozen-lockfile
 COPY app/frontend/ ./

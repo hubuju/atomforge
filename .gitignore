@@ -18,6 +18,9 @@ app/backend/wheels/
 # Local bootstrap / scratch space
 .cache/
 
+# 笔试说明文档（单独发送给 HR，不入库）
+全栈岗位笔试——*.md
+
 # Local configuration & secrets (never commit API keys)
 .env
 .env.local

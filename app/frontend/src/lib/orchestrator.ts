@@ -181,7 +181,13 @@ async function callRole(
  * A truncated file (HTML missing </html>, CSS/JS with unbalanced braces) used
  * to ship as-is and crash the preview at the first addEventListener. When the
  * model hits its output cap mid-file, append continuation rounds until the
- * file looks complete — never hand the user half a file.
+ * file looks complete.
+ *
+ * Crucially, an *empty* response must never destroy the progress already made:
+ * DeepSeek V4 thinks before answering, and a continuation round can burn its
+ * whole budget on `reasoning_content` and produce zero `content`. In that case
+ * we keep the partial file (the audit layer will flag the truncation) instead
+ * of throwing the whole Coder stage away.
  */
 async function writeFileComplete(
   board: LaneBoard,
@@ -190,21 +196,56 @@ async function writeFileComplete(
   path: string,
   firstMessages: ChatTurn[],
   inputDigest: string,
-): Promise<string> {
-  let content = stripCodeFence(await callRole(board, role, settings, firstMessages, inputDigest), path);
-  for (let attempt = 0; attempt < 2 && !fileLooksComplete(content, path); attempt += 1) {
-    board.patch(role, { detail: `${path} 被截断，正在续写（${attempt + 1}/2）` });
-    const more = await callRole(
-      board,
-      role,
-      settings,
-      continueFileMessages(path, content, role),
-      `续写 ${path}`,
-    );
-    const tail = stripCodeFence(more, path);
-    content = `${content.replace(/\s+$/, '')}\n${tail}`;
+): Promise<{ content: string; complete: boolean }> {
+  let content = '';
+  try {
+    const raw = await callRole(board, role, settings, firstMessages, inputDigest);
+    content = stripCodeFence(raw, path);
+  } catch {
+    // First attempt produced nothing (thinking swallowed the budget). One
+    // explicit retry before giving up on the round.
+    board.patch(role, { detail: `${path} 首轮没有正文输出，正在重试` });
+    try {
+      const raw = await callRole(
+        board,
+        role,
+        settings,
+        [
+          ...firstMessages,
+          {
+            role: 'user' as const,
+            content:
+              '（上一轮请求没有返回任何正文内容。请直接输出结果本身，不要只输出思考过程，不要解释。）',
+          },
+        ],
+        `重试 ${path}`,
+      );
+      content = stripCodeFence(raw, path);
+    } catch {
+      content = '';
+    }
   }
-  return content;
+
+  for (let attempt = 0; attempt < 2 && content && !fileLooksComplete(content, path); attempt += 1) {
+    board.patch(role, { detail: `${path} 被截断，正在续写（${attempt + 1}/2）` });
+    try {
+      const more = await callRole(
+        board,
+        role,
+        settings,
+        continueFileMessages(path, content, role),
+        `续写 ${path}`,
+      );
+      const tail = stripCodeFence(more, path);
+      if (tail) content = `${content.replace(/\s+$/, '')}\n${tail}`;
+    } catch {
+      // Continuation round came back empty — keep the partial file rather
+      // than throwing away everything written so far.
+      break;
+    }
+  }
+
+  return { content, complete: fileLooksComplete(content, path) };
 }
 
 /* ------------------------------------------------------------------ */
@@ -327,7 +368,7 @@ export async function buildProject({
       const previous =
         working.find((file) => file.path.toLowerCase() === target.path.toLowerCase())?.content || '';
 
-      const content = await writeFileComplete(
+      const { content, complete } = await writeFileComplete(
         board,
         settings,
         'coder',
@@ -345,6 +386,9 @@ export async function buildProject({
       );
 
       if (!content) throw new Error(`${target.path} 写出来是空的`);
+      if (!complete) {
+        board.patch('coder', { detail: `${target.path} 内容不完整（已保留，交给自检兜底）` });
+      }
 
       working = mergeFiles(working, [{ path: target.path, content }]);
       onFiles(working, target.path);
@@ -360,12 +404,18 @@ export async function buildProject({
     plan.map((file) => file.path).join('、'),
   );
 
-  /* ---- Reviewer / Fixer loop ---- */
+  /* ---- Reviewer / Fixer loop (configurable) ---- */
   let findings: ReviewFinding[] = [];
   let rounds = 0;
   let reviewSkipped = false;
   const fixed: string[] = [];
   const maxRounds = Math.max(1, settings.maxRepairRounds + 1);
+
+  if (!settings.reviewFix) {
+    board.skip('reviewer', '审查已关闭（设置里可重新开启）');
+    board.skip('fixer', '修复已关闭（设置里可重新开启）');
+    return { files: working, findings, rounds: 0, fixed, reviewSkipped };
+  }
 
   for (let round = 1; round <= maxRounds; round += 1) {
     rounds = round;
@@ -446,7 +496,7 @@ export async function buildProject({
         const file = working.find((entry) => entry.path === path);
         if (!file) continue;
 
-        const raw = await writeFileComplete(
+        const { content } = await writeFileComplete(
           board,
           settings,
           'fixer',
@@ -454,7 +504,6 @@ export async function buildProject({
           fixerMessages({ spec, file, findings: items, siblings: working }),
           items.map((item) => item.detail).join('；'),
         );
-        const content = stripCodeFence(raw, path);
         if (!content) continue;
 
         working = mergeFiles(working, [{ path, content }]);

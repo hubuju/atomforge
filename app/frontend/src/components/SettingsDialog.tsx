@@ -467,6 +467,19 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
                   />
                 </div>
 
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-3">
+                  <div className="min-w-0">
+                    <Label className="text-[12.5px]">生成后审查与修复</Label>
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                      实现者写完代码后，审查者挑问题、修复者定点修。关闭可显著加速，但少了模型层面的质量把关（静态体检仍然保留）。
+                    </p>
+                  </div>
+                  <Switch
+                    checked={draft.reviewFix}
+                    onCheckedChange={(checked) => patch({ reviewFix: checked })}
+                  />
+                </div>
+
                 <div className="space-y-2 rounded-lg border border-border bg-card p-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-[12.5px]">审查 → 修复轮次上限</Label>

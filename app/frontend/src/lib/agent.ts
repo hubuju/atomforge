@@ -500,7 +500,7 @@ async function streamViaAtoms(
   }
   if (pending.trim()) consume(pending);
 
-  if (!buffer.trim()) throw new Error('AI 服务返回了空内容，请确认模型配置');
+  if (!buffer.trim()) throw new Error('AI 这一轮没有输出正文（可能全部耗在思考过程上），系统已自动重试');
   return buffer;
 }
 
@@ -584,7 +584,7 @@ async function streamViaCompat(
   }
   if (pending.trim()) consume(pending);
 
-  if (!buffer.trim()) throw new Error('端点返回了空内容，请确认模型名称是否正确');
+  if (!buffer.trim()) throw new Error('端点返回了空内容：模型可能把输出额度都花在了思考过程上');
   return buffer;
 }
 

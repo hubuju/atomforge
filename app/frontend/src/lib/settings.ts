@@ -131,6 +131,11 @@ export interface ModelSettings {
   multiAgent: boolean;
   /** Pause after the Planner so the spec can be reviewed and edited. */
   confirmSpec: boolean;
+  /**
+   * Run the Reviewer → Fixer loop after the Coder finishes. Turning this off
+   * skips both stages entirely — much faster, but no model-level quality gate.
+   */
+  reviewFix: boolean;
   /** Per-role model override; empty string means "inherit the global model". */
   roleModels: Record<RoleId, string>;
   /** How many Reviewer → Fixer loops the orchestrator may run. */
@@ -154,6 +159,7 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   autoFix: true,
   multiAgent: true,
   confirmSpec: true,
+  reviewFix: true,
   roleModels: emptyRoleModels(),
   maxRepairRounds: 1,
 };
@@ -221,6 +227,7 @@ export function loadSettings(): ModelSettings {
       autoFix: parsed.autoFix !== false,
       multiAgent: parsed.multiAgent !== false,
       confirmSpec: parsed.confirmSpec !== false,
+      reviewFix: parsed.reviewFix !== false,
       roleModels: normalizeRoleModels(parsed.roleModels),
       maxRepairRounds: Math.round(
         clamp(numeric(parsed.maxRepairRounds), 0, 3, DEFAULT_SETTINGS.maxRepairRounds),

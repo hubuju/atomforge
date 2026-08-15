@@ -113,7 +113,7 @@ const SHARED_CODE_RULES = `代码硬性要求：
 /* Planner                                                             */
 /* ------------------------------------------------------------------ */
 
-function plannerSystem(maxFiles: number): string {
+function plannerSystem(_maxFiles: number): string {
   return `你是 AtomForge 多智能体流水线里的「规划者（Planner）」。你不写代码，只把需求拆成一份可执行的规格，交给下游的实现者。
 
 只输出一个 JSON 对象，第一个字符必须是 {，不要写解释文字，不要 markdown 围栏。结构：
@@ -128,10 +128,10 @@ function plannerSystem(maxFiles: number): string {
 
 约束：
 - views 3-6 条，data 1-4 条，interactions 4-8 条，全部使用中文。
-- files 必须包含 index.html，总数不超过 ${maxFiles} 个，只用同目录相对路径（如 "app.js"），不要建子目录。
+- files 必须包含 index.html，数量按需拆分（通常 3-6 个，复杂项目可以更多，不设硬上限），只用同目录相对路径（如 "app.js"），不要建子目录。
 - 常规拆分 index.html（结构）/ styles.css（样式）/ app.js（逻辑）；逻辑复杂时再拆 1-2 个 js 文件。
 - 规格要具体到能直接照着写代码：不要写"实现相关功能"这类空话。
-- 整个项目的代码规模控制在 900 行以内，据此收敛功能范围，只保留最能体现需求的核心能力。`;
+- 功能完整优先：把需求里的核心能力做扎实，不要为压行数砍功能。`;
 }
 
 export function plannerMessages(
@@ -158,7 +158,7 @@ export function repairJsonMessages(raw: string): ChatTurn[] {
       role: 'system',
       content: '你是 JSON 修复器。把用户给的内容整理成合法 JSON，只输出 JSON 本身，不要解释。',
     },
-    { role: 'user', content: raw.slice(0, 6000) },
+    { role: 'user', content: raw },
   ];
 }
 
@@ -229,7 +229,7 @@ export function parseSpec(raw: string, maxFiles: number): ProjectSpec {
     views: asList(parsed.views, 8),
     data: asList(parsed.data, 6),
     interactions: asList(parsed.interactions, 10),
-    files: unique.slice(0, Math.max(1, maxFiles)),
+    files: unique,
   };
 }
 
@@ -272,13 +272,28 @@ function fileContext(files: ProjectFile[], skipPath: string): string {
   const others = files.filter((file) => file.path.toLowerCase() !== skipPath.toLowerCase());
   if (!others.length) return '（还没有其他文件）';
   return others
-    .map(
-      (file) =>
-        `<<<FILE path="${file.path}">>>\n${file.content.slice(0, 4200)}${
-          file.content.length > 4200 ? '\n…（已截断）' : ''
-        }\n<<<END>>>`,
-    )
+    .map((file) => `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`)
     .join('\n\n');
+}
+
+/**
+ * Every element id declared in the entry document. The Coder gets this list
+ * verbatim so a JS file can never "hallucinate" an id that does not exist —
+ * which was the single most common defect class the reviewer kept finding
+ * (getElementById('records-list') when the HTML says 'interview-list').
+ */
+function collectHtmlIds(files: ProjectFile[]): string[] {
+  const ids: string[] = [];
+  files.forEach((file) => {
+    if (fileLang(file.path) !== 'html') return;
+    const re = /\bid\s*=\s*["']([^"']+)["']/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(file.content)) !== null) {
+      const id = match[1].trim();
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+  });
+  return ids;
 }
 
 export function coderMessages(options: {
@@ -298,7 +313,15 @@ export function coderMessages(options: {
     : '所有其他文件都已给出。';
 
   const revision = previous
-    ? `\n\n这个文件已有旧版本，请在它的基础上做最小必要改动：\n<<<FILE path="${target.path}">>>\n${previous.slice(0, 6000)}\n<<<END>>>`
+    ? `\n\n这个文件已有旧版本，请在它的基础上做最小必要改动：\n<<<FILE path="${target.path}">>>\n${previous}\n<<<END>>>`
+    : '';
+
+  // The single most common defect was a JS file referencing ids that do not
+  // exist in the HTML (or vice versa). Hand the Coder the verbatim id list so
+  // it can never guess wrong.
+  const ids = collectHtmlIds(written);
+  const idContract = ids.length
+    ? `\nindex.html 中真实存在的元素 id（引用必须严格一致，禁止使用清单之外的 id）：\n${ids.join('、')}`
     : '';
 
   return [
@@ -312,6 +335,7 @@ ${specDigest(spec)}
 已经写好的文件（保持接口一致）：
 
 ${fileContext(written, target.path)}
+${idContract}
 
 ${upcoming}
 
@@ -471,7 +495,7 @@ export function reviewerMessages(
   round: number,
 ): ChatTurn[] {
   const body = files
-    .map((file) => `<<<FILE path="${file.path}">>>\n${file.content.slice(0, 9000)}\n<<<END>>>`)
+    .map((file) => `<<<FILE path="${file.path}">>>\n${file.content}\n<<<END>>>`)
     .join('\n\n');
 
   return [
@@ -510,8 +534,7 @@ export function parseFindings(raw: string): ReviewFinding[] {
       };
     })
     .filter((item) => item.detail.length > 0)
-    .sort((a, b) => rank[a.severity] - rank[b.severity])
-    .slice(0, 8);
+    .sort((a, b) => rank[a.severity] - rank[b.severity]);
 }
 
 /* ------------------------------------------------------------------ */

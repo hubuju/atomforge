@@ -16,7 +16,7 @@ import {
  * orchestrator in `orchestrator.ts` drives four focused roles instead, reusing
  * the `streamChat` transport exported below.
  */
-function systemPrompt(maxFiles: number): string {
+function systemPrompt(_maxFiles: number): string {
   return `你是 AtomForge 的应用生成智能体，交付物是一个**多文件的原生前端项目**，它会在浏览器沙箱里运行。
 
 输出协议（必须严格遵守）：
@@ -36,13 +36,14 @@ function systemPrompt(maxFiles: number): string {
 文件组织要求：
 - 必须包含 index.html，且它用 <link rel="stylesheet" href="styles.css"> 与 <script src="app.js" defer></script> 引用同目录的兄弟文件。
 - 常规拆分：index.html（结构）、styles.css（样式）、app.js（逻辑）。逻辑较多时可再拆 1-2 个 js 文件（例如 storage.js、render.js），并在 index.html 中按依赖顺序引用。
-- 文件总数不超过 ${maxFiles} 个，只用同目录相对路径（如 "app.js"），不要建子目录。
+- 文件数量按需拆分，只用同目录相对路径（如 "app.js"），不要建子目录。
 - 不要把 CSS/JS 内联进 HTML —— 拆分后的代码更易读、易改，预览时系统会自动打包成单文档运行。
 - 多个 js 文件之间通过 window 上的全局对象通信，不要用 ES module 的 import/export。
 
 代码硬性要求（生成后会被自动检查，不达标会被打回重做）：
 - 必须真的能跑：不留 TODO、不留空函数，**每个按钮和输入框都要有真实绑定的事件处理**。
 - 绑定事件前先确认元素存在：所有 querySelector / getElementById 的结果要么在 HTML 里保证存在，要么做判空保护，禁止对 null 直接 addEventListener（这是最常见的运行时崩溃）。
+- **引用的每个元素 id、类名、函数名必须与已给出的兄弟文件完全一致，禁止凭记忆猜测**。
 - index.html 必须写到 </html>，每个 <script> 都要闭合。
 - 必须声明 <meta name="viewport" content="width=device-width, initial-scale=1">。
 - 允许的外部资源只有 CDN：https://cdn.tailwindcss.com 、https://unpkg.com 、https://cdn.jsdelivr.net 、以及 https://images.unsplash.com 的图片。
@@ -57,7 +58,7 @@ function systemPrompt(maxFiles: number): string {
   * 列表要有空状态提示，增删操作要有明确反馈（提示或过渡动画）；
   * 移动端断点流畅：小屏单列、按钮高度 ≥40px。
 - 注释与界面文案使用中文。
-- **控制体量**：所有文件合计约 900 行以内。注释精简，示例数据 3-6 条，不重复相似的 HTML 区块。
+- 功能完整优先于压行数：把需求的核心能力做扎实，注释保持精炼即可。
 
 当用户提出修改需求时，基于给定的"当前文件"做增量修改，然后**重新输出所有被改动的文件的完整内容**（未改动的文件可以不输出）。不要输出片段或 diff。`;
 }
@@ -86,10 +87,10 @@ export function buildMessages(
 ): ChatTurn[] {
   const messages: ChatTurn[] = [{ role: 'system', content: systemPrompt(maxFiles) }];
 
-  history.slice(-8).forEach((item) => {
+  history.forEach((item) => {
     messages.push({
       role: item.role === 'assistant' ? 'assistant' : 'user',
-      content: item.content.slice(0, 1200),
+      content: item.content,
     });
   });
 
@@ -719,10 +720,10 @@ export async function runGeneration({
     const soFar = parseStream(accumulated);
     continuations += 1;
     onContinue?.(continuations);
-    const tailOfCurrent = soFar.files[soFar.files.length - 1]?.content.slice(-600) || '';
+    const tailOfCurrent = soFar.files[soFar.files.length - 1]?.content || '';
     await round([
       ...messages,
-      { role: 'assistant', content: accumulated.slice(-6000) },
+      { role: 'assistant', content: accumulated },
       {
         role: 'user',
         content: `你上面的输出在到达长度上限时被截断了。请**紧接着断点继续输出剩余内容**，把所有文件写完（每个文件都要以 <<<END>>> 结束，index.html 必须写到 </html>）。

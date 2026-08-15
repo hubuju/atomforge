@@ -32,7 +32,6 @@ router = APIRouter(prefix="/api/v1/hub", tags=["hub"])
 
 PBKDF2_ROUNDS = 120000
 SLUG_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
-MAX_FILES = 50
 MAX_TEMPLATES = 30
 DEFAULT_VERSION_KEEP = 20
 
@@ -230,15 +229,14 @@ def iso(value: Any) -> Optional[str]:
 
 
 def dump_files(files: Optional[List[ProjectFile]]) -> str:
-    """Serialize a file list, dropping empty paths and capping the count."""
+    """Serialize a file list, dropping empty paths. No count cap: the product
+    deliberately does not limit how many files a project may have."""
     cleaned: List[Dict[str, str]] = []
     for item in files or []:
         path = (item.path or "").strip().lstrip("/")
         if not path:
             continue
         cleaned.append({"path": path, "content": item.content or ""})
-        if len(cleaned) >= MAX_FILES:
-            break
     return json.dumps(cleaned, ensure_ascii=False)
 
 

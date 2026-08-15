@@ -71,13 +71,13 @@ describe('parseSpec', () => {
     expect(spec.files.map((file) => file.path)).toEqual(['index.html', 'styles.css']);
   });
 
-  it('文件数受 maxFiles 限制', () => {
+  it('文件数不受 maxFiles 硬性限制', () => {
     const many = JSON.stringify({
       title: 'x',
       summary: 'y',
       files: Array.from({ length: 9 }, (_, i) => ({ path: `f${i}.js`, purpose: 'p' })),
     });
-    expect(parseSpec(many, 4).files).toHaveLength(4);
+    expect(parseSpec(many, 4).files).toHaveLength(9);
   });
 
   it('标题与说明缺失时有兜底文案', () => {
@@ -138,8 +138,10 @@ describe('plannerMessages', () => {
     expect(messages[1].content).toContain('增量修改');
   });
 
-  it('maxFiles 被写进系统提示', () => {
-    expect(plannerMessages('x', [], 4)[0].content).toContain('不超过 4 个');
+  it('系统提示不再写死文件数上限，而是按需拆分', () => {
+    const content = plannerMessages('x', [], 4)[0].content;
+    expect(content).toContain('按需拆分');
+    expect(content).not.toContain('不超过 4 个');
   });
 });
 

@@ -621,7 +621,7 @@ export function streamChat(
  */
 function joinWithoutOverlap(head: string, tail: string): string {
   const max = Math.min(400, head.length, tail.length);
-  for (let size = max; size >= 24; size -= 1) {
+  for (let size = max; size >= 10; size -= 1) {
     if (head.endsWith(tail.slice(0, size))) return head + tail.slice(size);
   }
   return head + tail;

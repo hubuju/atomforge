@@ -76,7 +76,7 @@ describe('loadSettings', () => {
       STORAGE_KEY,
       JSON.stringify({
         mode: 'atoms',
-        model: 'claude-opus-5',
+        model: 'deepseek-chat',
         temperature: 9,
         maxFiles: 99,
         versionKeep: 1,
@@ -93,7 +93,7 @@ describe('loadSettings', () => {
   it('数值字段是垃圾内容时使用默认值', () => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ model: 'claude-opus-5', temperature: 'hot', versionKeep: null }),
+      JSON.stringify({ model: 'deepseek-chat', temperature: 'hot', versionKeep: null }),
     );
     const loaded = loadSettings();
     expect(loaded.temperature).toBe(DEFAULT_SETTINGS.temperature);
@@ -109,7 +109,7 @@ describe('loadSettings', () => {
   });
 
   it('开关类字段默认开启，只有显式 false 才关闭', () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ model: 'claude-opus-5' }));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ model: 'deepseek-chat' }));
     const loaded = loadSettings();
     expect(loaded.autoAudit).toBe(true);
     expect(loaded.multiAgent).toBe(true);
@@ -119,7 +119,7 @@ describe('loadSettings', () => {
   it('角色模型字段被补齐成四个键', () => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ model: 'claude-opus-5', roleModels: { coder: '  gpt-5.6-sol  ', junk: 1 } }),
+      JSON.stringify({ model: 'deepseek-chat', roleModels: { coder: '  deepseek-reasoner  ', junk: 1 } }),
     );
     const loaded = loadSettings();
     expect(Object.keys(loaded.roleModels).sort()).toEqual([
@@ -128,7 +128,7 @@ describe('loadSettings', () => {
       'planner',
       'reviewer',
     ]);
-    expect(loaded.roleModels.coder).toBe('gpt-5.6-sol');
+    expect(loaded.roleModels.coder).toBe('deepseek-reasoner');
     expect(loaded.roleModels.planner).toBe('');
   });
 });
@@ -183,8 +183,8 @@ describe('resolveRoleSettings', () => {
   });
 
   it('内置模式下只接受清单内的覆盖，非法覆盖被忽略', () => {
-    const valid = base({ roleModels: { ...emptyRoleModels(), coder: 'gpt-5.6-sol' } });
-    expect(resolveRoleSettings(valid, 'coder').model).toBe('gpt-5.6-sol');
+    const valid = base({ roleModels: { ...emptyRoleModels(), coder: 'deepseek-reasoner' } });
+    expect(resolveRoleSettings(valid, 'coder').model).toBe('deepseek-reasoner');
 
     const invalid = base({ roleModels: { ...emptyRoleModels(), coder: 'wat' } });
     expect(resolveRoleSettings(invalid, 'coder').model).toBe(DEFAULT_SETTINGS.model);
@@ -222,8 +222,8 @@ describe('标签与覆盖检测', () => {
   });
 
   it('角色标签跟随覆盖结果', () => {
-    const settings = base({ roleModels: { ...emptyRoleModels(), planner: 'gemini-3.1-pro-preview' } });
-    expect(roleModelLabel(settings, 'planner')).toBe('Gemini 3.1 Pro');
+    const settings = base({ roleModels: { ...emptyRoleModels(), planner: 'deepseek-reasoner' } });
+    expect(roleModelLabel(settings, 'planner')).toBe('DeepSeek R1');
     expect(roleModelLabel(settings, 'coder')).toBe(ATOMS_MODELS[0].name);
   });
 
@@ -237,6 +237,6 @@ describe('标签与覆盖检测', () => {
 
   it('未知模型 id 回落到第一个内置模型', () => {
     expect(findAtomsModel('nope').id).toBe(ATOMS_MODELS[0].id);
-    expect(findAtomsModel('gpt-5.6-sol').name).toBe('GPT-5.6 Sol');
+    expect(findAtomsModel('deepseek-reasoner').name).toBe('DeepSeek R1');
   });
 });

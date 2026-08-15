@@ -190,6 +190,13 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 @app.get("/")
 def root():
+    # When a built frontend exists, the product UI is the app — not the
+    # template welcome message. `_frontend_root` is assigned later at module
+    # level; it is resolved at request time, after the module has loaded.
+    if _frontend_root.is_dir() and (_frontend_root / "index.html").is_file():
+        from fastapi.responses import FileResponse
+
+        return FileResponse(_frontend_root / "index.html")
     return {"message": "FastAPI Modular Template is running"}
 
 

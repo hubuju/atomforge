@@ -159,7 +159,9 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   autoFix: true,
   multiAgent: true,
   confirmSpec: true,
-  reviewFix: true,
+  // Off by default: the Reviewer/Fixer loop costs extra rounds and the
+  // user prefers speed; static + runtime self-checks still run regardless.
+  reviewFix: false,
   roleModels: emptyRoleModels(),
   maxRepairRounds: 1,
 };
@@ -227,7 +229,8 @@ export function loadSettings(): ModelSettings {
       autoFix: parsed.autoFix !== false,
       multiAgent: parsed.multiAgent !== false,
       confirmSpec: parsed.confirmSpec !== false,
-      reviewFix: parsed.reviewFix !== false,
+      // Opt-in (default off): only an explicit `true` enables the loop.
+      reviewFix: parsed.reviewFix === true,
       roleModels: normalizeRoleModels(parsed.roleModels),
       maxRepairRounds: Math.round(
         clamp(numeric(parsed.maxRepairRounds), 0, 3, DEFAULT_SETTINGS.maxRepairRounds),

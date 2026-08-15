@@ -414,7 +414,7 @@ export async function buildProject({
   if (!settings.reviewFix) {
     board.skip('reviewer', '审查已关闭（设置里可重新开启）');
     board.skip('fixer', '修复已关闭（设置里可重新开启）');
-    return { files: working, findings, rounds: 0, fixed, reviewSkipped };
+    return { files: working, findings, rounds: 0, fixed, reviewSkipped: true };
   }
 
   for (let round = 1; round <= maxRounds; round += 1) {
@@ -531,7 +531,7 @@ export function outcomeNarrative(spec: ProjectSpec, outcome: BuildOutcome): stri
   ];
 
   if (outcome.reviewSkipped) {
-    lines.push('审查者这一轮没有给出可解析的结果，已交由预览自检兜底。');
+    lines.push('本轮未运行模型审查（设置中已关闭），静态体检已兜底。');
   } else if (!outcome.findings.length) {
     lines.push('审查者没有发现问题。');
   } else {

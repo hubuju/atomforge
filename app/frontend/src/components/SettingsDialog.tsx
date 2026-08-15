@@ -480,7 +480,11 @@ export function SettingsDialog({ open, onOpenChange, value, onSave }: SettingsDi
                   />
                 </div>
 
-                <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+                <div
+                  className={`space-y-2 rounded-lg border border-border bg-card p-3 transition-opacity duration-200 ${
+                    draft.reviewFix ? '' : 'pointer-events-none opacity-50'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <Label className="text-[12.5px]">审查 → 修复轮次上限</Label>
                     <span className="nums-tabular font-code text-[11px] text-muted-foreground">

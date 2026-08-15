@@ -91,11 +91,14 @@ function stripNoise(source: string): string {
     }
     if (ch === '/' && next !== '/' && next !== '*') {
       // Heuristic regex literal (same logic as roles.ts): a '/' after an
-      // operator starts a regex, not a division. Without this, /}/g-style
-      // regexes miscount braces and cause false "script truncated" errors,
-      // which then trigger pointless auto-repair rounds.
-      const prev = out.length ? out[out.length - 1] : ' ';
-      if (/[(=,:;!&|?{}[\n]/.test(prev)) {
+      // operator, an opening bracket or a statement keyword starts a regex,
+      // not a division. Without this, /}/g-style regexes miscount braces and
+      // cause false "script truncated" errors, which then trigger pointless
+      // auto-repair rounds.
+      const trimmed = out.replace(/\s+$/, '');
+      const prev = trimmed.length ? trimmed[trimmed.length - 1] : ' ';
+      const afterKeyword = /\b(if|while|for|return|typeof|instanceof|switch|catch|with|in|of|void|case|throw|new|delete)\s*$/.test(trimmed);
+      if (/[(=,:;!&|?{}[\n]/.test(prev) || afterKeyword) {
         i += 1;
         let inClass = false;
         while (i < n) {

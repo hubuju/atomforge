@@ -219,6 +219,16 @@ console.log(re, n);`;
     expect(fileLooksComplete(js, 'app.js')).toBe(true);
   });
 
+  it('关键字 + 空格 + 正则（如 if (/}/)）不误判为括号不配平', () => {
+    const js = `function boot(str) {
+  if (/}/.test(str)) { return 'brace'; }
+  var ratio = (price / 100);
+  return ratio;
+}
+boot('x');`;
+    expect(fileLooksComplete(js, 'app.js')).toBe(true);
+  });
+
   it('真正截断的 JS（括号未闭合）判不完整', () => {
     expect(fileLooksComplete('function run() {\n  var a = 1;\n', 'app.js')).toBe(false);
   });

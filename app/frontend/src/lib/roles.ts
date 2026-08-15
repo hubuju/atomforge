@@ -384,13 +384,14 @@ function stripNoise(source: string): string {
       continue;
     }
     if (ch === '/' && next !== '/' && next !== '*') {
-      // Heuristic regex literal: a '/' that follows an operator / opening
-      // bracket starts a regex, not a division. Regexes like /}/g or
-      // /https?:\/\// used to be miscounted as unbalanced braces (or the
-      // inner // swallowed as a line comment), which wrongly triggered
-      // "file truncated" continuation rounds.
-      const prev = out.length ? out[out.length - 1] : ' ';
-      if (/[(=,:;!&|?{}[\n]/.test(prev)) {
+      // Heuristic regex literal: a '/' that follows an operator, an opening
+      // bracket or a statement keyword starts a regex, not a division.
+      // `if (/}/.test(x))` has a space before the '/', so look at the last
+      // non-space output character AND at a trailing keyword.
+      const trimmed = out.replace(/\s+$/, '');
+      const prev = trimmed.length ? trimmed[trimmed.length - 1] : ' ';
+      const afterKeyword = /\b(if|while|for|return|typeof|instanceof|switch|catch|with|in|of|void|case|throw|new|delete)\s*$/.test(trimmed);
+      if (/[(=,:;!&|?{}[\n]/.test(prev) || afterKeyword) {
         i += 1;
         let inClass = false;
         while (i < n) {

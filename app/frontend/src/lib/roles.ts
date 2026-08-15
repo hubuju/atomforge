@@ -106,6 +106,7 @@ const SHARED_CODE_RULES = `代码硬性要求：
 - 沙箱里 localStorage 可能不可用，访问时必须 try/catch 包裹。
 - 外部资源只允许 https://cdn.tailwindcss.com 、https://unpkg.com 、https://cdn.jsdelivr.net ，图片只用 https://images.unsplash.com。
 - 用原生 JS，不要引入 React 构建链。
+- **不要预置任何示例/演示数据**：列表、表格、统计都从空白状态开始，数据由用户自己添加。
 - 视觉现代精致：配色克制、留白合理、有 hover/active 状态、移动端可用；避免蓝紫渐变与玻璃拟态。
 - 注释与界面文案使用中文。`;
 

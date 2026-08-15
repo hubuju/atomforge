@@ -652,7 +652,7 @@ export default function Workspace() {
       setInput('');
       setStreaming({
         echo: prompt,
-        text: '规划者正在拆解需求…',
+        text: '正在理解你的需求…',
         files: [],
         writing: '',
         continuation: 0,
@@ -1204,33 +1204,46 @@ export default function Workspace() {
                   </div>
                 ) : null}
 
-                {/* The lanes of the latest round sit ABOVE the transcript so the
-                    delivery report (assistant message) reads as the conclusion
-                    under its execution record. */}
-                {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
+                {/* Transcript order: question(s) → execution lanes → answer.
+                    The lanes describe the round, so they render between the
+                    user prompt and the assistant's delivery report. */}
+                {(() => {
+                  const last = chatBubbles.length ? chatBubbles[chatBubbles.length - 1] : null;
+                  const hasTailAnswer = Boolean(last && last.role === 'assistant');
+                  const rest = hasTailAnswer ? chatBubbles.slice(0, -1) : chatBubbles;
+                  const tail = hasTailAnswer ? (last as NonNullable<typeof last>) : null;
 
-                {chatBubbles.map((row) => (
-                  <div
-                    key={row.key}
-                    className={row.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
-                  >
+                  const bubble = (row: (typeof chatBubbles)[number]) => (
                     <div
-                      className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${
-                        row.role === 'user'
-                          ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
-                          : 'border border-border bg-card text-muted-foreground'
-                      }`}
+                      key={row.key}
+                      className={row.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
                     >
-                      {row.kind === 'fix' ? (
-                        <span className="mb-1 flex items-center gap-1 text-[11px] text-destructive">
-                          <Wrench className="h-3 w-3" />
-                          修错请求
-                        </span>
-                      ) : null}
-                      <p className="whitespace-pre-wrap">{row.content}</p>
+                      <div
+                        className={`max-w-[92%] rounded-xl px-3 py-2 text-[12.5px] leading-relaxed ${
+                          row.role === 'user'
+                            ? 'bg-primary/15 text-foreground ring-1 ring-primary/25'
+                            : 'border border-border bg-card text-muted-foreground'
+                        }`}
+                      >
+                        {row.kind === 'fix' ? (
+                          <span className="mb-1 flex items-center gap-1 text-[11px] text-destructive">
+                            <Wrench className="h-3 w-3" />
+                            修错请求
+                          </span>
+                        ) : null}
+                        <p className="whitespace-pre-wrap">{row.content}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+
+                  return (
+                    <>
+                      {rest.map(bubble)}
+                      {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
+                      {tail ? bubble(tail) : null}
+                    </>
+                  );
+                })()}
 
                 {pendingPlan ? (
                   <SpecPanel

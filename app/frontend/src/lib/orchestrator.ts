@@ -269,7 +269,7 @@ export async function planProject({
   settings,
   board,
 }: PlanOptions): Promise<ProjectSpec> {
-  board.start('planner', files.length ? '分析改动范围' : '拆解需求');
+  board.start('planner', files.length ? '分析这次改动' : '理解需求，规划实现');
 
   try {
     const raw = await callRole(
@@ -404,12 +404,11 @@ export async function buildProject({
     plan.map((file) => file.path).join('、'),
   );
 
-  /* ---- Reviewer / Fixer loop (configurable) ---- */
+  /* ---- Reviewer / Fixer (configurable; one review, one fix, done) ---- */
   let findings: ReviewFinding[] = [];
   let rounds = 0;
   let reviewSkipped = false;
   const fixed: string[] = [];
-  const maxRounds = Math.max(1, settings.maxRepairRounds + 1);
 
   if (!settings.reviewFix) {
     board.skip('reviewer', '审查已关闭（设置里可重新开启）');
@@ -417,17 +416,17 @@ export async function buildProject({
     return { files: working, findings, rounds: 0, fixed, reviewSkipped: true };
   }
 
-  for (let round = 1; round <= maxRounds; round += 1) {
-    rounds = round;
-    board.start('reviewer', round === 1 ? '对照规格审查代码' : `第 ${round} 轮复查`);
+  {
+    rounds = 1;
+    board.start('reviewer', '对照规格审查代码');
 
     try {
       const raw = await callRole(
         board,
         'reviewer',
         settings,
-        reviewerMessages(spec, working, round),
-        `${working.length} 个文件 · 第 ${round} 轮`,
+        reviewerMessages(spec, working, 1),
+        `${working.length} 个文件 · 第 1 轮`,
       );
       try {
         findings = parseFindings(raw);
@@ -455,23 +454,17 @@ export async function buildProject({
       reviewSkipped = true;
       findings = [];
       board.skip('reviewer', '审查结果无法解析，本轮跳过审查');
-      break;
+      return { files: working, findings, rounds: 0, fixed, reviewSkipped: true };
     }
 
     const targets = actionableFindings(findings);
     if (!targets.length) {
-      if (round === 1) board.skip('fixer', '没有需要修复的问题');
-      break;
-    }
-    if (settings.maxRepairRounds === 0) {
-      board.skip('fixer', '自动修复已关闭');
-      break;
-    }
-    if (round > settings.maxRepairRounds) {
-      board.skip('fixer', `已达修复轮次上限（${settings.maxRepairRounds}）`);
-      break;
+      board.skip('fixer', '没有需要修复的问题');
+      return { files: working, findings, rounds, fixed, reviewSkipped };
     }
 
+    // One review, at most one fix round — no re-review loop. The static +
+    // runtime self-checks backstop whatever the fixer produced.
     /* ---- Fixer: one call per affected file ---- */
     const grouped = new Map<string, ReviewFinding[]>();
     targets.forEach((item) => {
@@ -484,7 +477,7 @@ export async function buildProject({
 
     if (!grouped.size) {
       board.skip('fixer', '问题没有定位到具体文件，交给自检兜底');
-      break;
+      return { files: working, findings, rounds, fixed, reviewSkipped };
     }
 
     board.start('fixer', `修复 ${grouped.size} 个文件`);
@@ -514,7 +507,6 @@ export async function buildProject({
     } catch (error) {
       // A failed repair still leaves the reviewed code in place.
       board.fail('fixer', error instanceof Error ? error.message : '修复失败');
-      break;
     }
   }
 

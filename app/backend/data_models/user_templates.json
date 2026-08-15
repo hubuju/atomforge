@@ -1,0 +1,44 @@
+{
+    "title": "user_templates",
+    "type": "object",
+    "description": "Personal reusable project template saved from an existing workspace (T5).",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Autoincrement primary key"
+        },
+        "account_id": {
+            "type": "integer",
+            "description": "Owner account id from the accounts table"
+        },
+        "name": {
+            "type": "string",
+            "description": "Template display name"
+        },
+        "description": {
+            "type": "string",
+            "description": "What this template is for"
+        },
+        "keywords": {
+            "type": "string",
+            "description": "Comma separated keywords used for hit matching"
+        },
+        "files_json": {
+            "type": "string",
+            "description": "Serialized project file list snapshot"
+        },
+        "source_workspace_id": {
+            "type": "integer",
+            "description": "Workspace this template was saved from, 0 when unknown"
+        },
+        "use_count": {
+            "type": "integer",
+            "description": "How many times this template has been used to create a project"
+        }
+    },
+    "required": [
+        "account_id",
+        "name",
+        "files_json"
+    ]
+}

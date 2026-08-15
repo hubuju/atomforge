@@ -1,0 +1,27 @@
+{
+    "title": "accounts",
+    "type": "object",
+    "description": "Lightweight app-level account: display name + password only.",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "autoincrement primary key"
+        },
+        "name": {
+            "type": "string",
+            "description": "unique login name"
+        },
+        "password_hash": {
+            "type": "string",
+            "description": "pbkdf2 salted hash"
+        },
+        "session_token": {
+            "type": "string",
+            "description": "opaque session token"
+        }
+    },
+    "required": [
+        "name",
+        "password_hash"
+    ]
+}

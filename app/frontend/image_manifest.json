@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "results": [
+    {
+      "status": "success",
+      "filename": "logo-atomforge-mark.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiipuycakbq/logo-atomforge-mark.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiipuycakbq/logo-atomforge-mark.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiipuycakbq/logo-atomforge-mark.png"
+    },
+    {
+      "status": "success",
+      "filename": "hero-ai-workspace-three-panel.jpg",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqbycakba/hero-ai-workspace-three-panel.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqbycakba/hero-ai-workspace-three-panel.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqbycakba/hero-ai-workspace-three-panel.png"
+    },
+    {
+      "status": "success",
+      "filename": "diagram-generation-pipeline-flow.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqqicakaq/diagram-generation-pipeline-flow.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqqicakaq/diagram-generation-pipeline-flow.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiqqicakaq/diagram-generation-pipeline-flow.png"
+    },
+    {
+      "status": "success",
+      "filename": "feature-ai-autofix-loop.png",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiq5acakaa/feature-ai-autofix-loop.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiq5acakaa/feature-ai-autofix-loop.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1528549/2026-08-14/uoiiq5acakaa/feature-ai-autofix-loop.png"
+    }
+  ],
+  "success_count": 4,
+  "failed_count": 0,
+  "running_count": 0,
+  "message": "Generated 4/4 images total"
+}

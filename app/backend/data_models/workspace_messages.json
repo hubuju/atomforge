@@ -1,0 +1,34 @@
+{
+    "title": "workspace_messages",
+    "type": "object",
+    "description": "Conversation log of one workspace.",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "autoincrement primary key"
+        },
+        "workspace_id": {
+            "type": "integer"
+        },
+        "account_id": {
+            "type": "integer"
+        },
+        "role": {
+            "type": "string",
+            "description": "user or assistant"
+        },
+        "content": {
+            "type": "string"
+        },
+        "kind": {
+            "type": "string",
+            "description": "text or fix"
+        }
+    },
+    "required": [
+        "workspace_id",
+        "account_id",
+        "role",
+        "content"
+    ]
+}

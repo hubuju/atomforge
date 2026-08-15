@@ -1,0 +1,15 @@
+services:
+  atomforge:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_AI_KEY: ${APP_AI_KEY:-}
+      APP_AI_BASE_URL: ${APP_AI_BASE_URL:-https://api.deepseek.com/v1}
+      DATABASE_URL: sqlite:////data/atomforge.db
+      FRONTEND_DIST: /app/frontend/dist
+    volumes:
+      - atomforge-data:/data
+
+volumes:
+  atomforge-data:

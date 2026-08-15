@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+app/frontend/node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+app/frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+app/backend/.venv/
+app/backend/site-pkgs/
+app/backend/wheels/
+
+# Local bootstrap / scratch space
+.cache/
+
+# Local configuration & secrets (never commit API keys)
+.env
+.env.local
+app/.env
+app/backend/.env
+
+# Data (SQLite database file)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# Logs
+logs/
+app/backend/logs/
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

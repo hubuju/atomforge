@@ -1,0 +1,43 @@
+{
+    "title": "projects",
+    "type": "object",
+    "description": "AI generated web application projects owned by a user",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Autoincrement primary key"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "Owner user id"
+        },
+        "name": {
+            "type": "string",
+            "description": "Project name"
+        },
+        "description": {
+            "type": "string",
+            "description": "Short description of the app"
+        },
+        "code": {
+            "type": "string",
+            "description": "Full single-file HTML source code of the generated app"
+        },
+        "is_published": {
+            "type": "boolean",
+            "description": "Whether the project is publicly shared"
+        },
+        "share_slug": {
+            "type": "string",
+            "description": "Public read-only share slug"
+        },
+        "version_count": {
+            "type": "integer",
+            "description": "Number of saved versions"
+        }
+    },
+    "required": [
+        "name",
+        "user_id"
+    ]
+}

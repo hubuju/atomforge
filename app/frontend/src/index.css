@@ -1,0 +1,285 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme — paper-white surfaces, deep olive-lime brand for contrast. */
+    --background: 80 20% 98%;
+    --foreground: 80 14% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 80 14% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 80 14% 12%;
+    --primary: 82 58% 28%;
+    --primary-foreground: 80 40% 98%;
+    --secondary: 80 14% 94%;
+    --secondary-foreground: 80 14% 20%;
+    --muted: 80 12% 95%;
+    --muted-foreground: 80 8% 40%;
+    --accent: 82 40% 91%;
+    --accent-foreground: 82 60% 22%;
+    --destructive: 6 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 80 10% 88%;
+    --input: 80 10% 86%;
+    --ring: 82 55% 38%;
+    --radius: 0.625rem;
+    --sidebar-background: 80 16% 96%;
+    --sidebar-foreground: 80 14% 18%;
+    --sidebar-primary: 82 58% 28%;
+    --sidebar-primary-foreground: 80 40% 98%;
+    --sidebar-accent: 80 12% 92%;
+    --sidebar-accent-foreground: 80 14% 18%;
+    --sidebar-border: 80 10% 88%;
+    --sidebar-ring: 82 55% 38%;
+
+    /* Source-viewer palette (light): darker inks so code stays readable. */
+    --code-bg: 80 18% 97%;
+    --code-plain: 80 14% 18%;
+    --code-gutter: 80 8% 55%;
+    --code-hover: 80 14% 20%;
+    --code-comment: 80 6% 48%;
+    --code-string: 152 52% 28%;
+    --code-number: 28 78% 32%;
+    --code-keyword: 265 58% 44%;
+    --code-builtin: 345 62% 40%;
+    --code-fn: 205 72% 33%;
+    --code-punct: 80 8% 42%;
+
+    /* Semantic status + file-type inks (light): darkened for white surfaces. */
+    --tone-ok: 152 55% 28%;
+    --tone-warn: 30 80% 32%;
+    --ink-html: 20 75% 36%;
+    --ink-css: 205 72% 34%;
+    --ink-js: 35 80% 32%;
+    --ink-json: 152 52% 28%;
+  }
+
+  .dark {
+    /* Warm-neutral surfaces tinted toward the brand hue (82), acid-lime accent. */
+    --background: 80 6% 7%;
+    --foreground: 80 8% 94%;
+    --card: 80 6% 10%;
+    --card-foreground: 80 8% 94%;
+    --popover: 80 7% 12%;
+    --popover-foreground: 80 8% 94%;
+    --primary: 82 70% 56%;
+    --primary-foreground: 82 60% 8%;
+    --secondary: 80 6% 15%;
+    --secondary-foreground: 80 8% 90%;
+    --muted: 80 6% 14%;
+    --muted-foreground: 80 6% 60%;
+    --accent: 80 7% 18%;
+    --accent-foreground: 82 60% 72%;
+    --destructive: 6 62% 52%;
+    --destructive-foreground: 6 20% 97%;
+    --border: 80 6% 18%;
+    --input: 80 6% 20%;
+    --ring: 82 65% 48%;
+    --sidebar-background: 80 6% 9%;
+    --sidebar-foreground: 80 8% 88%;
+    --sidebar-primary: 82 70% 56%;
+    --sidebar-primary-foreground: 82 60% 8%;
+    --sidebar-accent: 80 7% 16%;
+    --sidebar-accent-foreground: 80 8% 92%;
+    --sidebar-border: 80 6% 18%;
+    --sidebar-ring: 82 65% 48%;
+
+    /* Source-viewer palette (dark). */
+    --code-bg: 80 6% 8%;
+    --code-plain: 80 8% 90%;
+    --code-gutter: 80 6% 42%;
+    --code-hover: 80 10% 100%;
+    --code-comment: 80 6% 50%;
+    --code-string: 152 58% 68%;
+    --code-number: 43 88% 68%;
+    --code-keyword: 265 82% 80%;
+    --code-builtin: 348 82% 76%;
+    --code-fn: 199 82% 72%;
+    --code-punct: 80 6% 62%;
+
+    /* Semantic status + file-type inks (dark). */
+    --tone-ok: 152 58% 68%;
+    --tone-warn: 43 88% 68%;
+    --ink-html: 25 88% 70%;
+    --ink-css: 199 82% 72%;
+    --ink-js: 43 88% 68%;
+    --ink-json: 152 58% 68%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground text-base;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.6;
+    font-kerning: normal;
+    text-wrap: pretty;
+    /* Theme swaps should feel deliberate, not jarring. */
+    transition:
+      background-color 200ms cubic-bezier(0.25, 1, 0.5, 1),
+      color 200ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+    text-wrap: balance;
+  }
+
+  h1 {
+    @apply text-4xl font-bold leading-tight tracking-tight;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+
+  h3 {
+    @apply text-xl font-semibold;
+  }
+
+  code,
+  pre,
+  textarea.code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .font-code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .nums-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ease-out-quart {
+    transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.45) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.45) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Source viewer: theme-aware surface + token inks. */
+  .code-surface {
+    background-color: hsl(var(--code-bg));
+    color: hsl(var(--code-plain));
+  }
+
+  .code-gutter {
+    background-color: hsl(var(--code-bg));
+    color: hsl(var(--code-gutter) / 0.85);
+  }
+
+  .code-row:hover {
+    background-color: hsl(var(--code-hover) / 0.05);
+  }
+
+  .tok-comment {
+    color: hsl(var(--code-comment));
+    font-style: italic;
+  }
+
+  .tok-string {
+    color: hsl(var(--code-string));
+  }
+
+  .tok-number {
+    color: hsl(var(--code-number));
+  }
+
+  .tok-keyword {
+    color: hsl(var(--code-keyword));
+  }
+
+  .tok-builtin {
+    color: hsl(var(--code-builtin));
+  }
+
+  .tok-fn {
+    color: hsl(var(--code-fn));
+  }
+
+  .tok-punct {
+    color: hsl(var(--code-punct));
+  }
+
+  /* Status + file-type inks that stay legible on either surface. */
+  .tone-ok {
+    color: hsl(var(--tone-ok));
+  }
+
+  .tone-warn {
+    color: hsl(var(--tone-warn));
+  }
+
+  .tone-warn-soft {
+    color: hsl(var(--tone-warn) / 0.9);
+  }
+
+  /* Status chips / callouts: tinted surface + matching hairline border. */
+  .chip-ok {
+    color: hsl(var(--tone-ok));
+    background-color: hsl(var(--tone-ok) / 0.12);
+    border-color: hsl(var(--tone-ok) / 0.4);
+  }
+
+  .chip-warn {
+    color: hsl(var(--tone-warn));
+    background-color: hsl(var(--tone-warn) / 0.12);
+    border-color: hsl(var(--tone-warn) / 0.35);
+  }
+
+  .ink-html {
+    color: hsl(var(--ink-html));
+  }
+
+  .ink-css {
+    color: hsl(var(--ink-css));
+  }
+
+  .ink-js {
+    color: hsl(var(--ink-js));
+  }
+
+  .ink-json {
+    color: hsl(var(--ink-json));
+  }
+}

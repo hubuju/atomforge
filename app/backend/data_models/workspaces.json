@@ -1,0 +1,38 @@
+{
+    "title": "workspaces",
+    "type": "object",
+    "description": "A generated multi-file web project owned by an account.",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "autoincrement primary key"
+        },
+        "account_id": {
+            "type": "integer",
+            "description": "owner account id"
+        },
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "files_json": {
+            "type": "string",
+            "description": "JSON array of {path, content}"
+        },
+        "is_published": {
+            "type": "boolean"
+        },
+        "share_slug": {
+            "type": "string"
+        },
+        "version_count": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "account_id",
+        "name"
+    ]
+}

@@ -1,0 +1,45 @@
+{
+    "title": "workspace_versions",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "自增主键"
+        },
+        "workspace_id": {
+            "type": "integer",
+            "description": "所属工作区 id"
+        },
+        "account_id": {
+            "type": "integer",
+            "description": "所属账号 id"
+        },
+        "version_no": {
+            "type": "integer",
+            "description": "版本序号"
+        },
+        "files_json": {
+            "type": "string",
+            "description": "该版本的多文件项目快照 JSON"
+        },
+        "summary": {
+            "type": "string",
+            "description": "AI 生成的自动摘要"
+        },
+        "note": {
+            "type": "string",
+            "description": "用户手写的版本备注"
+        },
+        "audit_json": {
+            "type": "string",
+            "description": "该版本的自验证结果 JSON"
+        }
+    },
+    "required": [
+        "id",
+        "workspace_id",
+        "account_id",
+        "version_no",
+        "files_json"
+    ]
+}

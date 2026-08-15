@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
+  ArrowRight,
   ArrowUpDown,
   FileCode2,
   FolderPlus,
@@ -51,7 +52,7 @@ import {
   type ModelSettings,
 } from '@/lib/settings';
 import { TemplatePicker, type TemplateChoice } from '@/components/TemplatePicker';
-import { bestTemplateMatch, templateFiles } from '@/lib/templates';
+import { bestTemplateMatch, STARTER_TEMPLATES, templateFiles } from '@/lib/templates';
 import {
   api,
   errorText,
@@ -96,6 +97,8 @@ export default function Index() {
   const [newName, setNewName] = useState('');
   const [newBrief, setNewBrief] = useState('');
   const [creating, setCreating] = useState(false);
+  /** Template id being quick-started from the empty-state guide. */
+  const [quickStarting, setQuickStarting] = useState<string | null>(null);
 
   const [renameTarget, setRenameTarget] = useState<WorkspaceRecord | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -251,6 +254,33 @@ export default function Index() {
       toast({ title: '创建失败', description: errorText(error), variant: 'destructive' });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleQuickStart = async (template: (typeof STARTER_TEMPLATES)[number]) => {
+    setQuickStarting(template.id);
+    try {
+      const files = templateFiles(template);
+      const created = await api.createWorkspace({
+        name: template.name,
+        description: template.summary,
+        files,
+      });
+      await api.createVersion({
+        workspace_id: created.id,
+        version_no: 1,
+        files,
+        summary: `从内置项目「${template.name}」创建`,
+        note: '初始版本',
+        keep_limit: settings.versionKeep,
+        audit: '',
+      });
+      await api.updateWorkspace(created.id, { version_count: 1 });
+      navigate(`/w/${created.id}`, { state: { fromTemplate: template.name } });
+    } catch (error) {
+      toast({ title: '创建失败', description: errorText(error), variant: 'destructive' });
+    } finally {
+      setQuickStarting(null);
     }
   };
 
@@ -416,18 +446,52 @@ export default function Index() {
                 }
               />
             ) : projects.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
+              <div className="rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
                 <div className="mx-auto grid h-11 w-11 place-items-center rounded-lg border border-border bg-secondary text-primary">
                   <Sparkles className="h-5 w-5" />
                 </div>
-                <h3 className="mt-4 font-display text-lg font-semibold">还没有项目</h3>
+                <h3 className="mt-4 font-display text-lg font-semibold">从一个内置项目开始</h3>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                  新建一个项目，然后告诉智能体你想要什么 —— 比如「{placeholderIdea}」。
-                  生成的应用会立刻在右侧跑起来。
+                  点一下直接进入工作台，代码已经能跑，接着提修改就行。也可以创建空白项目，让智能体从零写。
                 </p>
-                <Button className="mt-6 gap-1.5" onClick={() => setCreateOpen(true)}>
-                  <FolderPlus className="h-4 w-4" />
-                  创建第一个项目
+
+                <div className="mx-auto mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
+                  {STARTER_TEMPLATES.slice(0, 3).map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      disabled={Boolean(quickStarting)}
+                      onClick={() => void handleQuickStart(template)}
+                      className="group flex flex-col items-start gap-1.5 rounded-xl border border-border bg-background/60 p-4 text-left transition-colors ease-out-quart duration-200 hover:md:border-primary/40 hover:md:bg-primary/[0.04]"
+                    >
+                      <span className="text-[13px] font-semibold">{template.name}</span>
+                      <span className="line-clamp-2 text-[11.5px] leading-snug text-muted-foreground">
+                        {template.summary}
+                      </span>
+                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary">
+                        {quickStarting === template.id ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            正在创建…
+                          </>
+                        ) : (
+                          <>
+                            直接开始
+                            <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="mt-6 !bg-transparent hover:!bg-transparent"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <FolderPlus className="mr-1.5 h-4 w-4" />
+                  创建空白项目
                 </Button>
               </div>
             ) : visible.length === 0 ? (

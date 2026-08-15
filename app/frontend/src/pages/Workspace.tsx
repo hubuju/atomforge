@@ -310,6 +310,18 @@ export default function Workspace() {
       setFiles(record.files || []);
       setActivePath(record.files?.[0]?.path || ENTRY_FILE);
       if (record.files?.length) setPreviewSrc(buildPreview(record.files));
+
+      // Restore the last round's lanes so a refresh keeps the execution record.
+      try {
+        const saved = JSON.parse(localStorage.getItem(`atomforge.lanes.${record.id}`) || 'null');
+        if (saved && Array.isArray(saved.lanes) && saved.lanes.length) {
+          setLanes(saved.lanes);
+          setLaneTitle(typeof saved.title === 'string' ? saved.title : '');
+        }
+      } catch {
+        /* ignore corrupted snapshot */
+      }
+
       setLoadState('ready');
     } catch (error) {
       setLoadError(errorText(error, '项目加载失败'));
@@ -593,11 +605,21 @@ export default function Workspace() {
           auditOn: active.autoAudit,
         });
 
-        setLaneTitle(
-          outcome.fixed.length
-            ? `完成 · 修复了 ${outcome.fixed.length} 个文件`
-            : '完成 · 审查未发现需要动代码的问题',
-        );
+        const finalTitle = outcome.fixed.length
+          ? `完成 · 修复了 ${outcome.fixed.length} 个文件`
+          : '完成 · 审查未发现需要动代码的问题';
+        setLaneTitle(finalTitle);
+
+        // Persist the finished lanes so a page refresh still shows the last
+        // round's execution record above the transcript.
+        try {
+          localStorage.setItem(
+            `atomforge.lanes.${project.id}`,
+            JSON.stringify({ lanes: board.list(), title: finalTitle }),
+          );
+        } catch {
+          /* private mode — lanes live for this page load only */
+        }
 
         if (
           active.autoAudit &&
@@ -1194,6 +1216,11 @@ export default function Workspace() {
                   </div>
                 ) : null}
 
+                {/* The lanes of the latest round sit ABOVE the transcript so the
+                    delivery report (assistant message) reads as the conclusion
+                    under its execution record. */}
+                {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
+
                 {chatBubbles.map((row) => (
                   <div
                     key={row.key}
@@ -1216,8 +1243,6 @@ export default function Workspace() {
                     </div>
                   </div>
                 ))}
-
-                {laneVisible ? <RoleLanes lanes={lanes} title={laneTitle} /> : null}
 
                 {pendingPlan ? (
                   <SpecPanel

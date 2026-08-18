@@ -52,6 +52,11 @@ class GenTxtRequest(BaseModel):
     stream: bool = Field(default=False, description="Whether to enable streaming output.")
     temperature: Optional[float] = Field(default=0.7, description="Sampling temperature (0-2).")
     max_tokens: Optional[int] = Field(default=65536, description="Maximum number of generated tokens.")
+    token: str = Field(
+        default="",
+        description="Opaque session token of the signed-in caller. The relay is "
+        "authenticated like /api/v1/hub/*; anonymous requests are rejected.",
+    )
 
 
 class GenTxtResponse(BaseModel):

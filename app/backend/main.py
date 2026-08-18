@@ -1,7 +1,5 @@
-import importlib
 import logging
 import os
-import pkgutil
 import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -11,7 +9,6 @@ from core.config import settings
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRouter
 from utils.logging_utils import cleanup_old_log_files
 
 # MODULE_IMPORTS_START
@@ -101,58 +98,24 @@ app.add_middleware(
 # MODULE_MIDDLEWARE_END
 
 
-# Auto-discover and include all routers from the local `routers` package
-def include_routers_from_package(app: FastAPI, package_name: str = "routers") -> None:
-    """Discover and include all APIRouter objects from a package.
-
-    This scans the given package (and subpackages) for module-level variables that
-    are instances of FastAPI's APIRouter. It supports "router", "admin_router" names.
-    """
-
-    logger = logging.getLogger(__name__)
-
-    try:
-        pkg = importlib.import_module(package_name)
-    except Exception as exc:  # pragma: no cover - defensive logging
-        logger.debug("Routers package '%s' not loaded: %s", package_name, exc)
-        return
-
-    discovered: int = 0
-    for _finder, module_name, is_pkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
-        # Only import leaf modules; subpackages will be walked automatically
-        if is_pkg:
-            continue
-        try:
-            module = importlib.import_module(module_name)
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.warning("Failed to import module '%s': %s", module_name, exc)
-            continue
-
-        # Check for router variable names: router and admin_router
-        for attr_name in ("router", "admin_router"):
-            if not hasattr(module, attr_name):
-                continue
-
-            attr = getattr(module, attr_name)
-
-            if isinstance(attr, APIRouter):
-                app.include_router(attr)
-                discovered += 1
-                logger.info("Included router: %s.%s", module_name, attr_name)
-            elif isinstance(attr, (list, tuple)):
-                for idx, item in enumerate(attr):
-                    if isinstance(item, APIRouter):
-                        app.include_router(item)
-                        discovered += 1
-                        logger.info("Included router from list: %s.%s[%d]", module_name, attr_name, idx)
-
-    if discovered == 0:
-        logger.debug("No routers discovered in package '%s'", package_name)
-
-
-# Setup logging before router discovery
+# Setup logging before the routers are imported.
 setup_logging()
-include_routers_from_package(app, "routers")
+
+# Routers are registered explicitly — never by package auto-discovery.
+#
+# The backend started from the "FastAPI Modular Template", whose router
+# auto-discovery scans the whole `routers` package and registers EVERY module
+# found there. That mechanism silently exposed the template's entity CRUD
+# routes (/api/v1/entities/accounts, workspaces, workspace_messages, ...),
+# which have no authentication and whose response models include
+# `password_hash` and `session_token`. Only the three product routers below
+# belong to this application; keeping the list explicit prevents template
+# leftovers from going live again.
+from routers import aihub, hub, share
+
+app.include_router(hub.router)
+app.include_router(share.router)
+app.include_router(aihub.router)
 
 
 # Add exception handler for all exceptions except HTTPException
@@ -224,6 +187,12 @@ if _frontend_root.is_dir():
     async def serve_frontend(full_path: str):
         """SPA fallback: real files are served as-is, anything else gets index.html."""
         if full_path:
+            # API paths must never fall back to the SPA shell. An unmatched
+            # /api/* request is a client error (or a removed legacy route),
+            # and answering it with the HTML shell would mask 404s in security
+            # checks that only look at the status code.
+            if full_path == "api" or full_path.startswith("api/"):
+                return JSONResponse(status_code=404, content={"detail": "Not Found"})
             candidate = (_frontend_root / full_path).resolve()
             if candidate.is_file() and candidate.is_relative_to(_frontend_root):
                 return FileResponse(candidate)

@@ -1,4 +1,4 @@
-import { type MessageRecord, type ProjectFile } from './client';
+import { loadToken, type MessageRecord, type ProjectFile } from './client';
 import { ENTRY_FILE, bundleForPreview, entryHtml } from './bundler';
 import {
   chatCompletionsUrl,
@@ -448,6 +448,10 @@ async function streamViaAtoms(
     stream: true,
     max_tokens: 65536,
     temperature: settings.temperature,
+    // The relay is authenticated like the /api/v1/hub/* routes: the current
+    // session token rides along so anonymous callers can't spend the
+    // server-side AI quota through the open endpoint.
+    token: loadToken(),
   };
 
   let response: Response;

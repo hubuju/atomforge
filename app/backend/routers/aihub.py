@@ -1,7 +1,12 @@
 """
-AI Hub router module.
-Provides text, image, video, audio, PDF analysis,
-and speech transcription API endpoints.
+AI Hub router — the generation relay.
+
+Only the text-generation relay is part of the product. The template's image /
+video / audio / PDF endpoints were removed: several of them accepted
+server-side file paths or arbitrary URLs (local file read / SSRF) and none of
+them required authentication. The remaining `gentxt` endpoint is authenticated
+with the same opaque session token as the `/api/v1/hub/*` routes, because every
+call spends the deployment's server-side AI quota.
 """
 
 import ast
@@ -9,26 +14,13 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
-from schemas.aihub import (
-    AnalyzePdfRequest,
-    AnalyzePdfResponse,
-    GenAudioRequest,
-    GenAudioResponse,
-    GenImgRequest,
-    GenImgResponse,
-    GenTxtRequest,
-    GenVideoRequest,
-    GenVideoResponse,
-    TranscribeAudioRequest,
-    TranscribeAudioResponse,
-)
-from services.aihub import (
-    AIHubService,
-    InvalidAudioInputError,
-    InvalidImageInputError,
-    InvalidPdfInputError,
-)
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.database import get_db
+from routers.hub import resolve_account
+from schemas.aihub import GenTxtRequest
+from services.aihub import AIHubService
 
 logger = logging.getLogger(__name__)
 
@@ -114,16 +106,19 @@ router = APIRouter(prefix="/api/v1/aihub", tags=["aihub"])
 
 
 @router.post("/gentxt")
-async def generate_text(
-    request: GenTxtRequest,
-):
+async def generate_text(request: GenTxtRequest, db: AsyncSession = Depends(get_db)):
     """
     Generate Text endpoint (supports text and image input).
+
+    Requires the caller's opaque session token (the same account system used by
+    `/api/v1/hub/*`). Anonymous requests are rejected before any AI call.
 
     Use the `stream` request parameter to control streaming behavior:
     - stream=false: return a full JSON response
     - stream=true: return an SSE streaming response
     """
+    await resolve_account(db, request.token)
+
     try:
         service = AIHubService()
 
@@ -157,142 +152,3 @@ async def generate_text(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=extract_error_message(e),
         )
-
-
-@router.post("/genimg", response_model=GenImgResponse)
-async def generate_image(
-    request: GenImgRequest,
-):
-    """
-    Text-to-Image / Image-to-Image endpoint.
-
-    Generate images based on the given prompt.
-    If `image` is provided, the endpoint uses the OpenAI-compatible `images/edits` API to edit the input image.
-
-    Available models:
-    - gemini-2.5-flash-image: visual creativity and editing, marketing asset generation, partial image editing
-    - gemini-3-pro-image-preview: higher quality image generation/editing
-    - gpt-image-2: best quality image generation/editing
-
-    Parameters:
-    - image: optional input image(s). Supports a base64 data URI string or a list of base64 data URIs. If provided, runs image editing (img2img).
-    - size: image size (1024x1024 / 1024x1792 / 1792x1024)
-    - quality: image quality (auto(for gpt-image-x series) / hd). Only effective for text-to-image; ignored when `image` is provided.
-    - n: number of images to generate (1-4)
-    """
-    try:
-        service = AIHubService()
-        return await service.genimg(request)
-
-    except InvalidImageInputError as e:
-        logger.warning(f"Invalid image input: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
-        logger.error(f"AI service configuration error: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=extract_error_message(e))
-    except Exception as e:
-        logger.error(f"Image generation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=extract_error_message(e),
-        )
-
-
-@router.post("/genvideo", response_model=GenVideoResponse)
-async def generate_video(request: GenVideoRequest):
-    """
-    Text-to-Video / Image-to-Video endpoint.
-
-    Generate videos based on the given prompt.
-    Returns a JSON response with the CDN URL of the generated video file.
-
-    Note: Video generation is async - the API will poll until completion.
-    See GenVideoRequest schema for model-specific constraints.
-    """
-    try:
-        service = AIHubService()
-        return await service.genvideo(request)
-
-    except InvalidImageInputError as e:
-        logger.warning(f"Invalid image input: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
-        logger.error(f"AI service configuration error: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=extract_error_message(e))
-    except Exception as e:
-        logger.error(f"Video generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=extract_error_message(e))
-
-
-@router.post("/genaudio", response_model=GenAudioResponse)
-async def generate_audio(request: GenAudioRequest):
-    """
-    Text-to-Speech (TTS) endpoint.
-
-    Generate audio from text using OpenAI-compatible TTS models.
-    Returns a JSON response with the CDN URL of the generated audio file.
-
-    Parameters:
-    - text: Text content to convert to audio
-    - model: TTS model name (default: qwen3-tts-flash)
-    - gender: Voice gender (male or female), voice is auto-selected based on model and gender
-    """
-    try:
-        service = AIHubService()
-        return await service.genaudio(request)
-
-    except ValueError as e:
-        logger.error(f"AI service configuration error: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=extract_error_message(e))
-    except Exception as e:
-        logger.error(f"Audio generation failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=extract_error_message(e))
-
-
-@router.post("/transcribe", response_model=TranscribeAudioResponse)
-async def transcribe_audio(request: TranscribeAudioRequest):
-    """
-    Speech-to-Text (STT) endpoint.
-
-    Transcribe audio to text using OpenAI-compatible transcription models.
-
-    Parameters:
-    - audio: audio source. Supports absolute path, http(s) URL, or base64 data URI
-    - model: STT model name (default: scribe_v2)
-    """
-    try:
-        service = AIHubService()
-        return await service.transcribe(request)
-
-    except (InvalidAudioInputError, FileNotFoundError) as e:
-        logger.warning(f"Invalid audio transcription input: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
-        logger.error(f"AI service configuration error: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=extract_error_message(e))
-    except Exception as e:
-        logger.error(f"Audio transcription failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=extract_error_message(e))
-
-
-@router.post("/analyzepdf", response_model=AnalyzePdfResponse)
-async def analyze_pdf(request: AnalyzePdfRequest):
-    """
-    Analyze a single PDF using native PDF input.
-
-    The endpoint accepts a single base64 PDF data URI and returns either a direct
-    answer (`qa`) or structured extraction content (`extract`).
-    """
-    try:
-        service = AIHubService()
-        return await service.analyze_pdf(request)
-
-    except InvalidPdfInputError as e:
-        logger.warning(f"Invalid PDF analysis input: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ValueError as e:
-        logger.error(f"AI service configuration error: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=extract_error_message(e))
-    except Exception as e:
-        logger.error(f"PDF analysis failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=extract_error_message(e))

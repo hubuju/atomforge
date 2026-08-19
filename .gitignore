@@ -7,6 +7,10 @@ app/frontend/node_modules/
 dist/
 app/frontend/dist/
 
+# Playwright artifacts
+app/frontend/test-results/
+app/frontend/playwright-report/
+
 # Python
 __pycache__/
 *.pyc
